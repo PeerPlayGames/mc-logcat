@@ -934,6 +934,9 @@ mark {
 <div id="toast"></div>
 
 <script>
+// ── Socket (declared first — referenced throughout) ───────────────────────────
+const socket = io();
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const CAT_COLORS = {
@@ -1225,6 +1228,7 @@ function setEmptyState(show, title, sub) {
 // ── Device status via REST (reliable fallback, not subject to Socket.IO timing) ──
 
 function applyDeviceStatus({ connected, serial, pid }) {
+  console.log('[MC-Logcat] applyDeviceStatus called:', connected, serial, pid);
   if (connected) {
     deviceBadge.className = 'device-badge connected';
     deviceLabel.textContent = serial ? serial.slice(-8) : 'Connected';
@@ -1250,8 +1254,11 @@ async function pollDeviceStatus() {
   try {
     const res = await fetch('/api/status');
     const data = await res.json();
+    console.log('[MC-Logcat] /api/status response:', JSON.stringify(data));
     applyDeviceStatus(data);
-  } catch (e) { /* server not ready yet */ }
+  } catch (e) {
+    console.error('[MC-Logcat] pollDeviceStatus error:', e);
+  }
 }
 
 // Poll immediately on load, then every 3s
@@ -1259,8 +1266,6 @@ pollDeviceStatus();
 setInterval(pollDeviceStatus, 3000);
 
 // ── Socket.IO ────────────────────────────────────────────────────────────────
-
-const socket = io();
 
 socket.on('connect', () => {
   statusLeft.textContent = 'Connected to server';
@@ -1429,8 +1434,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-
-setEmptyState(true);
+// Don't set empty state here — pollDeviceStatus() handles initial state async
 </script>
 </body>
 </html>

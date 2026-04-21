@@ -357,25 +357,11 @@ def api_status():
 
 @socketio.on('connect')
 def on_connect():
-    # Always do a fresh ADB poll on connect — don't rely on background thread timing
-    serial = get_device()
-    pid = get_pid(serial) if serial else None
-
-    state['device_serial'] = serial
-    state['device_connected'] = serial is not None
-    state['pid'] = pid
-
-    if serial and pid and not state.get('logcat_proc'):
-        restart_logcat(serial, pid)
-
+    # Send buffered logs to the newly connected browser.
+    # Device state is handled by /api/status REST polling — no emit here.
     with state['lock']:
         batch = state['log_buffer'][-500:]
     emit('log_batch', batch)
-    emit('device_status', {
-        'connected': serial is not None,
-        'serial': serial,
-        'pid': pid,
-    })
 
 
 @socketio.on('refresh_device')
