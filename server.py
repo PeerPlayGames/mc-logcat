@@ -330,7 +330,29 @@ def explain_log_with_claude(log: dict) -> str:
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    from flask import make_response
+    resp = make_response(render_template('index.html'))
+    resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
+
+
+@app.route('/api/status')
+def api_status():
+    """REST fallback so the browser can always get device state reliably."""
+    from flask import jsonify
+    serial = get_device()
+    pid    = get_pid(serial) if serial else None
+
+    # Keep server state in sync
+    state['device_serial']    = serial
+    state['device_connected'] = serial is not None
+    state['pid']              = pid
+
+    if serial and pid and not state.get('logcat_proc'):
+        restart_logcat(serial, pid)
+
+    return jsonify({'connected': serial is not None, 'serial': serial, 'pid': pid})
 
 
 @socketio.on('connect')

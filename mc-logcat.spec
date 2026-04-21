@@ -22,7 +22,6 @@ a = Analysis(
         'engineio',
         'socketio',
         'engineio.async_drivers.threading',
-        'socketio.async_drivers.threading',
         'anthropic',
         'bidict',
         'dns',
@@ -77,8 +76,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName':             'MergeCruiseLogcat',
         'CFBundleDisplayName':      'Merge Cruise Logcat',
-        'CFBundleVersion':          '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleVersion': '1.0.1',
+        'CFBundleShortVersionString': '1.0.1',
         'NSHighResolutionCapable':  True,
         'LSUIElement':              False,   # Show in Dock
         'NSRequiresAquaSystemAppearance': False,

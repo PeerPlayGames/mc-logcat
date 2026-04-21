@@ -1203,10 +1203,11 @@ epRerunBtn.addEventListener('click', runExplain);
 // ── Refresh button ───────────────────────────────────────────────────────────
 
 const refreshBtn = document.getElementById('refresh-btn');
-refreshBtn.addEventListener('click', () => {
+refreshBtn.addEventListener('click', async () => {
   refreshBtn.classList.add('spinning');
   setTimeout(() => refreshBtn.classList.remove('spinning'), 650);
-  socket.emit('refresh_device');
+  await pollDeviceStatus();
+  socket.emit('refresh_device'); // also kick server-side logcat restart
 });
 
 // ── Empty state ──────────────────────────────────────────────────────────────
@@ -1221,19 +1222,9 @@ function setEmptyState(show, title, sub) {
   }
 }
 
-// ── Socket.IO ────────────────────────────────────────────────────────────────
+// ── Device status via REST (reliable fallback, not subject to Socket.IO timing) ──
 
-const socket = io();
-
-socket.on('connect', () => {
-  statusLeft.textContent = 'Connected to server';
-});
-
-socket.on('disconnect', () => {
-  statusLeft.textContent = 'Server disconnected — is server.py running?';
-});
-
-socket.on('device_status', ({ connected, serial, pid }) => {
+function applyDeviceStatus({ connected, serial, pid }) {
   if (connected) {
     deviceBadge.className = 'device-badge connected';
     deviceLabel.textContent = serial ? serial.slice(-8) : 'Connected';
@@ -1242,17 +1233,45 @@ socket.on('device_status', ({ connected, serial, pid }) => {
     deviceLabel.textContent = 'No Device';
     pidBadge.classList.add('hidden');
     setEmptyState(true, 'Waiting for Device', 'Connect an Android device with Merge Cruise installed');
+    return;
   }
-
   if (pid) {
     pidBadge.classList.remove('hidden');
     pidVal.textContent = pid;
-    setEmptyState(false);
-  } else if (connected) {
+    if (logTable.children.length > 0 || logs.length > 0) setEmptyState(false);
+    else setEmptyState(false); // device+app ready, hide empty state
+  } else {
     pidBadge.classList.add('hidden');
     setEmptyState(true, 'App Not Running', 'Launch Merge Cruise on the device');
   }
+}
+
+async function pollDeviceStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    applyDeviceStatus(data);
+  } catch (e) { /* server not ready yet */ }
+}
+
+// Poll immediately on load, then every 3s
+pollDeviceStatus();
+setInterval(pollDeviceStatus, 3000);
+
+// ── Socket.IO ────────────────────────────────────────────────────────────────
+
+const socket = io();
+
+socket.on('connect', () => {
+  statusLeft.textContent = 'Connected to server';
+  pollDeviceStatus(); // also refresh on socket reconnect
 });
+
+socket.on('disconnect', () => {
+  statusLeft.textContent = 'Server disconnected — is server.py running?';
+});
+
+socket.on('device_status', applyDeviceStatus);
 
 socket.on('log', (log) => {
   if (logTable.children.length === 0 && logs.length === 0) setEmptyState(false);
