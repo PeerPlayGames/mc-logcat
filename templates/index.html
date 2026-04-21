@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Merge Cruise Logcat — PeerPlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #060D1A;
+  --surface:    #0A1628;
+  --panel:      #0E1F38;
+  --card:       #122540;
+  --border:     #1A3450;
+  --border2:    #1F3F60;
+
+  --gold:       #F4C430;
+  --gold-dim:   #C49A20;
+  --gold-glow:  rgba(244,196,48,0.18);
+  --cyan:       #00CFFF;
+  --cyan-dim:   #0099CC;
+  --teal:       #00D4B4;
+
+  --text:       #D8EAF7;
+  --text-muted: #5A7A99;
+  --text-dim:   #3A5A75;
+
+  /* Level colours */
+  --lv-v:  #334155;
+  --lv-d:  #4A6480;
+  --lv-i:  #00CFFF;
+  --lv-w:  #F4C430;
+  --lv-e:  #FF4D4D;
+
+  /* Category colours */
+  --cat-unity:     #22C55E;
+  --cat-ads:       #C084FC;
+  --cat-network:   #60A5FA;
+  --cat-analytics: #FB923C;
+  --cat-sentry:    #F87171;
+  --cat-facebook:  #60A5FA;
+  --cat-system:    #475569;
+
+  --font-ui:    'DM Sans', sans-serif;
+  --font-title: 'Rajdhani', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+
+  --header-h:   62px;
+  --filter-h:   88px;
+  --status-h:   30px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ── Layout skeleton ──────────────────────────────────────────────── */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ───────────────────────────────────────────────────────── */
+header {
+  height: var(--header-h);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: relative;
+  z-index: 10;
+}
+
+/* subtle animated ocean wave at bottom of header */
+header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--gold) 20%,
+    var(--cyan) 50%,
+    var(--gold) 80%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: wave-slide 4s linear infinite;
+}
+@keyframes wave-slide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ship-icon {
+  width: 36px; height: 36px;
+  color: var(--gold);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px var(--gold-glow));
+}
+
+.title-block h1 {
+  font-family: var(--font-title);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  line-height: 1;
+  text-shadow: 0 0 20px var(--gold-glow);
+}
+
+.title-block .subtitle {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Device status badge */
+.device-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: all 0.3s;
+}
+.device-badge.connected {
+  border-color: var(--teal);
+  background: rgba(0,212,180,0.08);
+  color: var(--teal);
+}
+.device-badge.disconnected {
+  border-color: var(--border2);
+  color: var(--text-muted);
+}
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+.device-badge.connected .dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.4); }
+}
+
+/* Refresh button */
+#refresh-btn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+#refresh-btn:hover { color: var(--cyan); border-color: var(--cyan-dim); transform: rotate(180deg); }
+#refresh-btn.spinning { animation: spin 0.6s linear; }
+
+/* PID badge */
+.pid-badge {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--cyan);
+  transition: all 0.3s;
+}
+.pid-badge.hidden { display: none; }
+
+/* Stats */
+.stats {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+.stat-val {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+.stat-lbl {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#stat-total  { color: var(--text); }
+#stat-errors { color: var(--lv-e); }
+#stat-warns  { color: var(--lv-w); }
+
+.stats-divider {
+  width: 1px; height: 30px;
+  background: var(--border);
+}
+
+/* ── Filter bar ───────────────────────────────────────────────────── */
+.filter-bar {
+  height: var(--filter-h);
+  flex-shrink: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 20px;
+  gap: 8px;
+}
+
+/* Row 1: presets */
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-btn {
+  padding: 5px 13px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.preset-btn:hover {
+  border-color: var(--cyan-dim);
+  color: var(--cyan);
+  background: rgba(0,207,255,0.06);
+}
+.preset-btn.active {
+  background: var(--card);
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+.preset-btn[data-preset="errors"].active {
+  color: var(--lv-e);
+  border-color: var(--lv-e);
+  background: rgba(255,77,77,0.08);
+}
+
+.preset-sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+
+/* Row 2: controls */
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.level-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-right: 2px;
+}
+.lvl-btn {
+  width: 28px; height: 26px;
+  border-radius: 4px;
+  border: 1px solid;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.lvl-btn[data-level="V"] { border-color: var(--lv-v); color: var(--lv-v); }
+.lvl-btn[data-level="D"] { border-color: var(--lv-d); color: var(--lv-d); }
+.lvl-btn[data-level="I"] { border-color: var(--lv-i); color: var(--lv-i); }
+.lvl-btn[data-level="W"] { border-color: var(--lv-w); color: var(--lv-w); }
+.lvl-btn[data-level="E"] { border-color: var(--lv-e); color: var(--lv-e); }
+
+.lvl-btn.active[data-level="V"] { background: rgba(51,65,85,0.5); }
+.lvl-btn.active[data-level="D"] { background: rgba(74,100,128,0.3); }
+.lvl-btn.active[data-level="I"] { background: rgba(0,207,255,0.12); }
+.lvl-btn.active[data-level="W"] { background: rgba(244,196,48,0.12); }
+.lvl-btn.active[data-level="E"] { background: rgba(255,77,77,0.14); }
+
+.lvl-btn:not(.active) { opacity: 0.3; }
+
+/* Search */
+.search-wrap {
+  flex: 1;
+  max-width: 340px;
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-size: 15px;
+  pointer-events: none;
+  user-select: none;
+}
+#search-input {
+  width: 100%;
+  padding: 6px 30px 6px 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+#search-input::placeholder { color: var(--text-dim); }
+#search-input:focus { border-color: var(--cyan-dim); }
+
+.clear-search-btn {
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  background: none; border: none;
+  color: var(--text-dim);
+  cursor: pointer; font-size: 13px;
+  line-height: 1; padding: 2px;
+  display: none;
+}
+.clear-search-btn.visible { display: block; }
+.clear-search-btn:hover { color: var(--text); }
+
+/* Control buttons */
+.ctl-btns { display: flex; gap: 6px; margin-left: auto; }
+
+.toggle-btn {
+  padding: 5px 13px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.04em;
+}
+.toggle-btn.active {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(0,212,180,0.08);
+}
+
+.action-btn {
+  padding: 5px 13px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.04em;
+}
+.action-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: var(--gold-glow);
+}
+#clear-btn:hover {
+  border-color: var(--lv-e);
+  color: var(--lv-e);
+  background: rgba(255,77,77,0.08);
+}
+
+/* ── Log viewer ───────────────────────────────────────────────────── */
+#log-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+  position: relative;
+  min-width: 0;
+}
+
+#log-table {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Log row */
+.log-row {
+  display: grid;
+  grid-template-columns: 168px 30px 185px 1fr;
+  gap: 0;
+  align-items: baseline;
+  padding: 2px 0;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgba(26,52,80,0.4);
+  transition: background 0.1s;
+  cursor: default;
+}
+.log-row:hover { background: rgba(255,255,255,0.03) !important; }
+
+/* Level-based left border & row tint */
+.log-row.level-V { border-left-color: #1E293B; }
+.log-row.level-D { border-left-color: #334155; }
+.log-row.level-I { border-left-color: var(--cyan); }
+.log-row.level-W {
+  border-left-color: var(--lv-w);
+  background: rgba(244,196,48,0.04);
+}
+.log-row.level-E {
+  border-left-color: var(--lv-e);
+  background: rgba(255,77,77,0.07);
+}
+
+/* Cells */
+.log-ts {
+  padding: 3px 8px 3px 10px;
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
+}
+
+.log-lvl {
+  padding: 2px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 3px;
+  text-align: center;
+  align-self: start;
+  margin-top: 3px;
+}
+.lvl-V { color: var(--lv-v); }
+.lvl-D { color: var(--lv-d); }
+.lvl-I { color: var(--lv-i); }
+.lvl-W { color: var(--lv-w); font-weight: 700; }
+.lvl-E { color: var(--lv-e); font-weight: 700; }
+
+.log-tag {
+  padding: 3px 8px 3px 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  align-self: center;
+}
+
+.log-msg {
+  padding: 3px 16px 3px 4px;
+  color: var(--text);
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.55;
+}
+.level-E .log-msg { color: #FFBDBD; }
+.level-W .log-msg { color: #FFF0B3; }
+.level-V .log-msg, .level-D .log-msg { color: var(--text-muted); }
+
+/* Search highlight */
+mark {
+  background: rgba(244,196,48,0.35);
+  color: var(--gold);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────── */
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+#empty-state.hidden { display: none; }
+#empty-state svg {
+  width: 64px; height: 64px;
+  opacity: 0.25;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+#empty-state p {
+  font-family: var(--font-title);
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+#empty-state .sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.6;
+  font-family: var(--font-ui);
+  letter-spacing: 0.05em;
+}
+
+/* ── Status bar ───────────────────────────────────────────────────── */
+.status-bar {
+  height: var(--status-h);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+.status-bar span {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+#status-right { color: var(--text-muted); }
+
+/* ── Explanation panel ────────────────────────────────────────────── */
+#main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#explain-panel {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.25s ease;
+  overflow: hidden;
+}
+#explain-panel.hidden {
+  width: 0;
+  border-left: none;
+}
+
+.explain-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.explain-header-title {
+  font-family: var(--font-title);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.explain-close {
+  background: none; border: none;
+  color: var(--text-muted); cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+.explain-close:hover { color: var(--text); }
+
+.explain-log-meta {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--panel);
+}
+.explain-meta-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.explain-meta-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 60px;
+}
+.explain-meta-val {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  word-break: break-all;
+  font-size: 11px;
+}
+.explain-msg-box {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--panel);
+}
+.explain-msg-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.explain-msg-text {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.explain-ai-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.explain-ai-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.explain-ai-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.explain-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.explain-ai-text {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.explain-ai-text strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.explain-btn {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 5px;
+  border: 1px solid var(--cyan-dim);
+  background: rgba(0,207,255,0.06);
+  color: var(--cyan);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.explain-btn:hover { background: rgba(0,207,255,0.12); }
+
+/* Row selected state */
+.log-row.selected {
+  background: rgba(244,196,48,0.07) !important;
+  border-left-color: var(--gold) !important;
+}
+
+/* ── Notification toast ───────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 44px; right: 20px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 100;
+}
+#toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-left">
+      <!-- Ship icon SVG -->
+      <svg class="ship-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M24 6v22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M24 6 L32 14 L24 14 L16 14 Z" fill="currentColor" opacity="0.6"/>
+        <rect x="8" y="28" width="32" height="8" rx="3" fill="currentColor" opacity="0.9"/>
+        <path d="M6 36 Q12 42 18 39 Q24 36 30 39 Q36 42 42 36" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="14" cy="32" r="2" fill="var(--bg)"/>
+        <circle cx="24" cy="32" r="2" fill="var(--bg)"/>
+        <circle cx="34" cy="32" r="2" fill="var(--bg)"/>
+        <path d="M8 28 L11 22 L37 22 L40 28" fill="currentColor" opacity="0.5"/>
+      </svg>
+
+      <div class="title-block">
+        <h1>MERGE CRUISE</h1>
+        <div class="subtitle">LogCat Viewer &nbsp;•&nbsp; PeerPlay DevTools</div>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div id="device-badge" class="device-badge disconnected">
+        <span class="dot"></span>
+        <span id="device-label">No Device</span>
+      </div>
+      <button id="refresh-btn" title="Refresh device connection">↺</button>
+
+      <div id="pid-badge" class="pid-badge hidden">
+        PID&nbsp;<span id="pid-val">—</span>
+      </div>
+
+      <div class="stats-divider"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-val" id="stat-total">0</span>
+          <span class="stat-lbl">Total</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val" id="stat-errors">0</span>
+          <span class="stat-lbl">Errors</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val" id="stat-warns">0</span>
+          <span class="stat-lbl">Warns</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Filter bar ── -->
+  <div class="filter-bar">
+    <!-- Row 1: presets -->
+    <div class="preset-row">
+      <button class="preset-btn active" data-preset="all">ALL</button>
+      <div class="preset-sep"></div>
+      <button class="preset-btn" data-preset="unity">⚙ UNITY</button>
+      <button class="preset-btn" data-preset="ads">📢 ADS</button>
+      <button class="preset-btn" data-preset="network">🌐 NETWORK</button>
+      <button class="preset-btn" data-preset="analytics">📊 ANALYTICS</button>
+      <button class="preset-btn" data-preset="sentry">🔴 SENTRY</button>
+      <button class="preset-btn" data-preset="facebook">👤 FACEBOOK</button>
+      <div class="preset-sep"></div>
+      <button class="preset-btn" data-preset="errors">⚠ ERRORS ONLY</button>
+    </div>
+
+    <!-- Row 2: level toggles + search + controls -->
+    <div class="ctrl-row">
+      <div class="level-group">
+        <span class="level-lbl">Level</span>
+        <button class="lvl-btn active" data-level="V">V</button>
+        <button class="lvl-btn active" data-level="D">D</button>
+        <button class="lvl-btn active" data-level="I">I</button>
+        <button class="lvl-btn active" data-level="W">W</button>
+        <button class="lvl-btn active" data-level="E">E</button>
+      </div>
+
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Filter tag or message…" autocomplete="off" spellcheck="false">
+        <button class="clear-search-btn" id="clear-search-btn">✕</button>
+      </div>
+
+      <div class="ctl-btns">
+        <button class="toggle-btn active" id="autoscroll-btn">↓ Auto</button>
+        <button class="action-btn" id="clear-btn">Clear</button>
+        <button class="action-btn" id="export-btn">Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Log viewer + explanation panel ── -->
+  <div id="main-area">
+    <div id="log-container">
+      <div id="log-table"></div>
+      <div id="empty-state">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 6v22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M24 6 L32 14 L24 14 L16 14 Z" fill="currentColor"/>
+          <rect x="8" y="28" width="32" height="8" rx="3" fill="currentColor"/>
+          <path d="M6 36 Q12 42 18 39 Q24 36 30 39 Q36 42 42 36" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M8 28 L11 22 L37 22 L40 28" fill="currentColor" opacity="0.5"/>
+        </svg>
+        <p id="empty-title">Waiting for Device</p>
+        <span class="sub" id="empty-sub">Connect an Android device with Merge Cruise installed</span>
+      </div>
+    </div>
+
+    <!-- Claude explanation panel -->
+    <div id="explain-panel" class="hidden">
+      <div class="explain-header">
+        <span class="explain-header-title">⚡ Claude Analysis</span>
+        <button class="explain-close" id="explain-close-btn">✕</button>
+      </div>
+      <div class="explain-log-meta">
+        <div class="explain-meta-row">
+          <span class="explain-meta-label">Level</span>
+          <span class="explain-meta-val" id="ep-level">—</span>
+        </div>
+        <div class="explain-meta-row">
+          <span class="explain-meta-label">Tag</span>
+          <span class="explain-meta-val" id="ep-tag">—</span>
+        </div>
+        <div class="explain-meta-row">
+          <span class="explain-meta-label">Category</span>
+          <span class="explain-meta-val" id="ep-cat">—</span>
+        </div>
+        <div class="explain-meta-row">
+          <span class="explain-meta-label">Time</span>
+          <span class="explain-meta-val" id="ep-ts">—</span>
+        </div>
+      </div>
+      <div class="explain-msg-box">
+        <div class="explain-msg-label">Full Message</div>
+        <div class="explain-msg-text" id="ep-msg">—</div>
+      </div>
+      <div class="explain-ai-section">
+        <div class="explain-ai-label">Claude Interpretation</div>
+        <div id="ep-loading" class="explain-loading" style="display:none">
+          <div class="spinner"></div>
+          <span>Analyzing…</span>
+        </div>
+        <div id="ep-text" class="explain-ai-text"></div>
+        <button id="ep-rerun-btn" class="explain-btn" style="display:none">↺ Re-analyze</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Status bar ── -->
+  <div class="status-bar">
+    <span id="status-left">Ready</span>
+    <span id="status-right">0 logs in memory</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+
+const CAT_COLORS = {
+  unity:     '#22C55E',
+  ads:       '#C084FC',
+  network:   '#60A5FA',
+  analytics: '#FB923C',
+  sentry:    '#F87171',
+  facebook:  '#60A5FA',
+  system:    '#475569',
+};
+
+const MAX_DOM_ROWS = 2000;
+const MAX_MEM_LOGS = 10000;
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let logs = [];                          // all logs in memory
+let stats = { total: 0, errors: 0, warns: 0 };
+let autoScroll = true;
+let activeCategories = new Set();       // empty = show all categories
+let errorsOnly = false;                 // ⚠ ERRORS ONLY toggle
+let activeLevels = new Set(['V','D','I','W','E']);
+let searchText = '';
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+
+const logContainer  = document.getElementById('log-container');
+const logTable      = document.getElementById('log-table');
+const emptyState    = document.getElementById('empty-state');
+const emptyTitle    = document.getElementById('empty-title');
+const emptySub      = document.getElementById('empty-sub');
+const deviceBadge   = document.getElementById('device-badge');
+const deviceLabel   = document.getElementById('device-label');
+const pidBadge      = document.getElementById('pid-badge');
+const pidVal        = document.getElementById('pid-val');
+const statTotal     = document.getElementById('stat-total');
+const statErrors    = document.getElementById('stat-errors');
+const statWarns     = document.getElementById('stat-warns');
+const statusLeft    = document.getElementById('status-left');
+const statusRight   = document.getElementById('status-right');
+const searchInput   = document.getElementById('search-input');
+const clearSearchBtn= document.getElementById('clear-search-btn');
+const autoscrollBtn = document.getElementById('autoscroll-btn');
+const toast         = document.getElementById('toast');
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function highlightSearch(str) {
+  if (!searchText) return str;
+  try {
+    const rx = new RegExp(escHtml(searchText).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+    return str.replace(rx, m => `<mark>${m}</mark>`);
+  } catch { return str; }
+}
+
+function showToast(msg, duration = 2200) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+// ── Filter logic ─────────────────────────────────────────────────────────────
+
+function passesFilter(log) {
+  // Level toggles
+  if (!activeLevels.has(log.level)) return false;
+  // Errors-only shortcut (works on top of any category selection)
+  if (errorsOnly && log.level !== 'E' && log.level !== 'W') return false;
+  // Category multi-select: if any selected, log must match one of them
+  if (activeCategories.size > 0 && !activeCategories.has(log.category)) return false;
+  // Text search
+  if (searchText) {
+    const lo = searchText.toLowerCase();
+    if (!log.tag.toLowerCase().includes(lo) &&
+        !log.message.toLowerCase().includes(lo)) return false;
+  }
+  return true;
+}
+
+// ── Row creation ─────────────────────────────────────────────────────────────
+
+function makeRow(log) {
+  const div = document.createElement('div');
+  div.className = `log-row level-${log.level}`;
+
+  const catColor = CAT_COLORS[log.category] || CAT_COLORS.system;
+  const tag = escHtml(log.tag || '');
+  const ts  = escHtml(log.timestamp || '');
+  const msg = highlightSearch(escHtml(log.message || ''));
+
+  div.innerHTML =
+    `<span class="log-ts">${ts}</span>` +
+    `<span class="log-lvl lvl-${log.level}">${log.level}</span>` +
+    `<span class="log-tag" style="color:${catColor}" title="${tag}">${tag}</span>` +
+    `<span class="log-msg">${msg}</span>`;
+
+  // Click: open panel. Auto-explain on E/W rows.
+  div.addEventListener('click', () => {
+    const autoExplain = (log.level === 'E' || log.level === 'W');
+    openExplainPanel(log, div, autoExplain);
+  });
+
+  return div;
+}
+
+// ── Append a single row (real-time) ──────────────────────────────────────────
+
+function appendRow(log) {
+  logTable.appendChild(makeRow(log));
+
+  // Trim DOM
+  while (logTable.children.length > MAX_DOM_ROWS) {
+    logTable.removeChild(logTable.firstChild);
+  }
+
+  if (autoScroll) {
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+}
+
+// ── Full re-render (after filter change) ─────────────────────────────────────
+
+function rerender() {
+  logTable.innerHTML = '';
+
+  const matching = logs.filter(passesFilter);
+  const slice = matching.slice(-MAX_DOM_ROWS);
+  const frag = document.createDocumentFragment();
+  for (const log of slice) frag.appendChild(makeRow(log));
+  logTable.appendChild(frag);
+
+  updateStatus(matching.length);
+
+  if (autoScroll) logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+// ── Add incoming log ─────────────────────────────────────────────────────────
+
+function addLog(log) {
+  logs.push(log);
+  if (logs.length > MAX_MEM_LOGS) logs.shift();
+
+  stats.total++;
+  if (log.level === 'E') stats.errors++;
+  if (log.level === 'W') stats.warns++;
+  updateStatDisplay();
+
+  if (passesFilter(log)) {
+    appendRow(log);
+    updateStatus();
+  }
+}
+
+// ── Stats & status display ───────────────────────────────────────────────────
+
+function updateStatDisplay() {
+  statTotal.textContent  = fmt(stats.total);
+  statErrors.textContent = fmt(stats.errors);
+  statWarns.textContent  = fmt(stats.warns);
+  statusRight.textContent = `${fmt(logs.length)} logs in memory`;
+}
+
+function updateStatus(filteredCount) {
+  const shown = logTable.children.length;
+  const fc = filteredCount !== undefined ? filteredCount : shown;
+  const isFiltered = activeCategories.size > 0 || errorsOnly || searchText || activeLevels.size < 5;
+
+  if (isFiltered) {
+    const parts = [];
+    if (activeCategories.size > 0) parts.push([...activeCategories].join('+').toUpperCase());
+    if (errorsOnly) parts.push('ERRORS');
+    if (searchText) parts.push(`"${searchText}"`);
+    statusLeft.textContent = `Filter: ${parts.join(' + ')} — ${fmt(shown)} of ${fmt(fc)} shown`;
+  } else {
+    statusLeft.textContent = `${fmt(shown)} rows displayed — ${fmt(stats.total)} total`;
+  }
+}
+
+function fmt(n) {
+  if (n >= 1000) return (n/1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+// ── Explanation panel ─────────────────────────────────────────────────────────
+
+const explainPanel  = document.getElementById('explain-panel');
+const epLevel       = document.getElementById('ep-level');
+const epTag         = document.getElementById('ep-tag');
+const epCat         = document.getElementById('ep-cat');
+const epTs          = document.getElementById('ep-ts');
+const epMsg         = document.getElementById('ep-msg');
+const epLoading     = document.getElementById('ep-loading');
+const epText        = document.getElementById('ep-text');
+const epRerunBtn    = document.getElementById('ep-rerun-btn');
+
+let selectedRow = null;
+let selectedLog = null;
+
+const LEVEL_NAMES = {E:'Error', W:'Warning', I:'Info', D:'Debug', V:'Verbose'};
+const CAT_COLORS_MAP = {
+  unity:'#22C55E', ads:'#C084FC', network:'#60A5FA',
+  analytics:'#FB923C', sentry:'#F87171', facebook:'#60A5FA', system:'#475569'
+};
+
+function openExplainPanel(log, rowEl, autoExplain) {
+  // Deselect previous row
+  if (selectedRow) selectedRow.classList.remove('selected');
+  selectedRow = rowEl;
+  rowEl.classList.add('selected');
+  selectedLog = log;
+
+  // Populate meta
+  const lv = log.level || '';
+  const cat = log.category || 'system';
+  epLevel.textContent = `${lv} — ${LEVEL_NAMES[lv] || lv}`;
+  epLevel.style.color = lv === 'E' ? '#FF4D4D' : lv === 'W' ? '#F4C430' : '#D8EAF7';
+  epTag.textContent = log.tag || '';
+  epTag.style.color = CAT_COLORS_MAP[cat] || '#475569';
+  epCat.textContent = cat.toUpperCase();
+  epTs.textContent = log.timestamp || '';
+  epMsg.textContent = log.message || '';
+
+  // Clear previous AI content
+  epText.innerHTML = '';
+  epText.style.display = 'none';
+  epRerunBtn.style.display = 'none';
+
+  explainPanel.classList.remove('hidden');
+
+  if (autoExplain) {
+    runExplain();
+  }
+}
+
+function runExplain() {
+  if (!selectedLog) return;
+  epLoading.style.display = 'flex';
+  epText.style.display = 'none';
+  epRerunBtn.style.display = 'none';
+  socket.emit('explain_log', selectedLog);
+}
+
+socket.on('log_explanation', ({ explanation }) => {
+  epLoading.style.display = 'none';
+  epText.style.display = 'block';
+  epRerunBtn.style.display = 'inline-block';
+  // Render **bold** markdown
+  epText.innerHTML = escHtml(explanation)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+});
+
+document.getElementById('explain-close-btn').addEventListener('click', () => {
+  explainPanel.classList.add('hidden');
+  if (selectedRow) { selectedRow.classList.remove('selected'); selectedRow = null; }
+  selectedLog = null;
+});
+
+epRerunBtn.addEventListener('click', runExplain);
+
+// ── Refresh button ───────────────────────────────────────────────────────────
+
+const refreshBtn = document.getElementById('refresh-btn');
+refreshBtn.addEventListener('click', () => {
+  refreshBtn.classList.add('spinning');
+  setTimeout(() => refreshBtn.classList.remove('spinning'), 650);
+  socket.emit('refresh_device');
+});
+
+// ── Empty state ──────────────────────────────────────────────────────────────
+
+function setEmptyState(show, title, sub) {
+  if (show) {
+    emptyState.classList.remove('hidden');
+    emptyTitle.textContent = title || 'Waiting for Device';
+    emptySub.textContent   = sub   || 'Connect an Android device with Merge Cruise installed';
+  } else {
+    emptyState.classList.add('hidden');
+  }
+}
+
+// ── Socket.IO ────────────────────────────────────────────────────────────────
+
+const socket = io();
+
+socket.on('connect', () => {
+  statusLeft.textContent = 'Connected to server';
+});
+
+socket.on('disconnect', () => {
+  statusLeft.textContent = 'Server disconnected — is server.py running?';
+});
+
+socket.on('device_status', ({ connected, serial, pid }) => {
+  if (connected) {
+    deviceBadge.className = 'device-badge connected';
+    deviceLabel.textContent = serial ? serial.slice(-8) : 'Connected';
+  } else {
+    deviceBadge.className = 'device-badge disconnected';
+    deviceLabel.textContent = 'No Device';
+    pidBadge.classList.add('hidden');
+    setEmptyState(true, 'Waiting for Device', 'Connect an Android device with Merge Cruise installed');
+  }
+
+  if (pid) {
+    pidBadge.classList.remove('hidden');
+    pidVal.textContent = pid;
+    setEmptyState(false);
+  } else if (connected) {
+    pidBadge.classList.add('hidden');
+    setEmptyState(true, 'App Not Running', 'Launch Merge Cruise on the device');
+  }
+});
+
+socket.on('log', (log) => {
+  if (logTable.children.length === 0 && logs.length === 0) setEmptyState(false);
+  addLog(log);
+});
+
+socket.on('log_batch', (batch) => {
+  if (!batch || !batch.length) return;
+  setEmptyState(false);
+  for (const log of batch) {
+    logs.push(log);
+    if (log.level === 'E') stats.errors++;
+    if (log.level === 'W') stats.warns++;
+  }
+  stats.total += batch.length;
+  updateStatDisplay();
+  rerender();
+});
+
+socket.on('logs_cleared', () => {
+  logs = [];
+  stats = { total: 0, errors: 0, warns: 0 };
+  logTable.innerHTML = '';
+  updateStatDisplay();
+  updateStatus(0);
+  setEmptyState(false);
+  showToast('Logs cleared');
+});
+
+socket.on('sys_msg', ({ text, type }) => {
+  showToast(text);
+});
+
+// ── Preset filter buttons (multi-select) ─────────────────────────────────────
+
+function syncPresetButtons() {
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    const p = btn.dataset.preset;
+    if (p === 'all') {
+      btn.classList.toggle('active', activeCategories.size === 0 && !errorsOnly);
+    } else if (p === 'errors') {
+      btn.classList.toggle('active', errorsOnly);
+    } else {
+      btn.classList.toggle('active', activeCategories.has(p));
+    }
+  });
+}
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const p = btn.dataset.preset;
+    if (p === 'all') {
+      // Reset everything
+      activeCategories.clear();
+      errorsOnly = false;
+    } else if (p === 'errors') {
+      // Toggle errors-only (works alongside category filters)
+      errorsOnly = !errorsOnly;
+    } else {
+      // Toggle this category in/out of the active set
+      if (activeCategories.has(p)) {
+        activeCategories.delete(p);
+      } else {
+        activeCategories.add(p);
+      }
+    }
+    syncPresetButtons();
+    rerender();
+  });
+});
+
+// ── Level toggle buttons ─────────────────────────────────────────────────────
+
+document.querySelectorAll('.lvl-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const lv = btn.dataset.level;
+    if (activeLevels.has(lv)) {
+      // Don't allow deselecting all
+      if (activeLevels.size === 1) return;
+      activeLevels.delete(lv);
+      btn.classList.remove('active');
+    } else {
+      activeLevels.add(lv);
+      btn.classList.add('active');
+    }
+    rerender();
+  });
+});
+
+// ── Search ───────────────────────────────────────────────────────────────────
+
+let searchTimer;
+searchInput.addEventListener('input', () => {
+  searchText = searchInput.value.trim();
+  clearSearchBtn.classList.toggle('visible', searchText.length > 0);
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(rerender, 160);
+});
+
+clearSearchBtn.addEventListener('click', () => {
+  searchInput.value = '';
+  searchText = '';
+  clearSearchBtn.classList.remove('visible');
+  rerender();
+});
+
+// ── Auto-scroll ──────────────────────────────────────────────────────────────
+
+autoscrollBtn.addEventListener('click', () => {
+  autoScroll = !autoScroll;
+  autoscrollBtn.classList.toggle('active', autoScroll);
+  if (autoScroll) logContainer.scrollTop = logContainer.scrollHeight;
+});
+
+// Detect manual scroll up → disable auto-scroll
+logContainer.addEventListener('scroll', () => {
+  const atBottom = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight < 40;
+  if (!atBottom && autoScroll) {
+    autoScroll = false;
+    autoscrollBtn.classList.remove('active');
+  } else if (atBottom && !autoScroll) {
+    autoScroll = true;
+    autoscrollBtn.classList.add('active');
+  }
+});
+
+// ── Clear ────────────────────────────────────────────────────────────────────
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  socket.emit('clear_logs');
+});
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!logs.length) { showToast('No logs to export'); return; }
+
+  const now = new Date();
+  const ts = now.toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const filename = `mergecruise-logcat-${ts}.txt`;
+
+  const lines = logs.map(l =>
+    `${l.timestamp || ''} ${l.level}/${l.tag}: ${l.message || ''}`
+  ).join('\n');
+
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast(`Exported ${fmt(logs.length)} logs → ${filename}`);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+setEmptyState(true);
+</script>
+</body>
+</html>
