@@ -54,6 +54,13 @@
   --header-h:   62px;
   --filter-h:   88px;
   --status-h:   30px;
+
+  /* Charles status colours */
+  --ch-ok:       #22C55E;
+  --ch-redirect: #60A5FA;
+  --ch-warn:     #F4C430;
+  --ch-error:    #FF4D4D;
+  --ch-pending:  #475569;
 }
 
 html, body {
@@ -434,6 +441,38 @@ header::after {
   background: rgba(255,77,77,0.08);
 }
 
+/* ── Log col header (sticky sort row) ────────────────────────────── */
+.log-cols-header {
+  display: grid;
+  grid-template-columns: 168px 30px 185px 1fr;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  flex-shrink: 0;
+}
+.log-col-hdr {
+  padding: 4px 8px 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  user-select: none;
+}
+.log-col-hdr:nth-child(2) { padding-left: 4px; }
+.log-col-hdr.sort-col {
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+.log-col-hdr.sort-col:hover { color: var(--cyan); }
+.log-col-hdr.sort-col.active { color: var(--cyan); }
+
 /* ── Log viewer ───────────────────────────────────────────────────── */
 #log-container {
   flex: 1;
@@ -442,6 +481,8 @@ header::after {
   background: var(--bg);
   position: relative;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 #log-table {
@@ -586,12 +627,367 @@ mark {
 }
 #status-right { color: var(--text-muted); }
 
-/* ── Explanation panel ────────────────────────────────────────────── */
+/* ── View toggle ──────────────────────────────────────────────────── */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+}
+.view-btn {
+  padding: 4px 11px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.view-btn.active {
+  border-color: var(--cyan-dim);
+  color: var(--cyan);
+  background: rgba(0,207,255,0.08);
+}
+
+/* ── Main area ────────────────────────────────────────────────────── */
 #main-area {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
+
+/* ── Draggable divider ────────────────────────────────────────────── */
+#view-divider {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--border);
+  cursor: col-resize;
+  position: relative;
+  transition: background 0.15s;
+  z-index: 5;
+}
+#view-divider:hover, #view-divider.dragging { background: var(--cyan-dim); }
+#view-divider::after {
+  content: '⋮';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-dim);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+/* ── Charles panel ────────────────────────────────────────────────── */
+#charles-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+}
+#charles-panel.hidden { display: none; }
+
+.charles-header {
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+}
+.charles-header-title {
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--cyan);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.charles-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.charles-status-dot.watching { background: var(--ch-ok); animation: pulse-dot 1.8s ease-in-out infinite; }
+.charles-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.ch-sort-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ch-sort-btn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.charles-clear-btn {
+  background: none; border: none;
+  color: var(--text-dim); cursor: pointer;
+  font-size: 11px; font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+.charles-clear-btn:hover { color: var(--lv-e); }
+
+/* Charles filter bar */
+.charles-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.ch-preset-btn {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ch-preset-btn:hover { border-color: var(--cyan-dim); color: var(--cyan); background: rgba(0,207,255,0.05); }
+.ch-preset-btn.active { border-color: var(--cyan-dim); color: var(--cyan); background: rgba(0,207,255,0.1); }
+.ch-preset-btn[data-filter="errors"].active { border-color: var(--lv-e); color: var(--lv-e); background: rgba(255,77,77,0.08); }
+.ch-search-wrap {
+  margin-left: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+#ch-search {
+  width: 150px;
+  padding: 3px 24px 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.2s, width 0.2s;
+}
+#ch-search:focus { border-color: var(--cyan-dim); width: 200px; }
+#ch-clear-search {
+  position: absolute; right: 6px;
+  background: none; border: none;
+  color: var(--text-dim); cursor: pointer;
+  font-size: 10px; padding: 0;
+  display: none;
+}
+#ch-clear-search.visible { display: block; }
+
+/* Proxy setup bar */
+.charles-setup {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.charles-setup label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+#proxy-port-input {
+  width: 68px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+#proxy-port-input:focus { border-color: var(--cyan-dim); }
+#proxy-port-input:disabled { opacity: 0.5; }
+.charles-connect-btn {
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--cyan-dim);
+  background: rgba(0,207,255,0.06);
+  color: var(--cyan);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.charles-connect-btn:hover { background: rgba(0,207,255,0.14); }
+.charles-connect-btn.running {
+  border-color: var(--lv-e);
+  color: var(--lv-e);
+  background: rgba(255,77,77,0.06);
+}
+.charles-connect-btn.running:hover { background: rgba(255,77,77,0.14); }
+.proxy-cert-link {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.18s;
+  white-space: nowrap;
+  display: none;
+}
+.proxy-cert-link:hover { color: var(--gold); border-color: var(--gold-dim); }
+.proxy-cert-link.visible { display: inline-flex; align-items: center; gap: 4px; }
+/* Proxy address guide (shown when running) */
+.proxy-guide {
+  margin-left: auto;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.proxy-guide.visible { display: flex; }
+.proxy-guide-addr {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ch-ok);
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  user-select: all;
+}
+.proxy-guide-addr:hover { background: rgba(34,197,94,0.14); }
+
+/* Charles columns header */
+.charles-cols {
+  display: grid;
+  grid-template-columns: 148px 52px 52px 1fr 72px;
+  gap: 0;
+  padding: 4px 10px 4px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+.charles-col-hdr {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  user-select: none;
+}
+.charles-col-hdr.sort-col {
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+.charles-col-hdr.sort-col:hover { color: var(--cyan); }
+.charles-col-hdr.sort-col.active { color: var(--cyan); }
+
+/* Charles entries */
+#charles-table {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.charles-row {
+  display: grid;
+  grid-template-columns: 148px 52px 52px 1fr 72px;
+  gap: 0;
+  padding: 3px 10px 3px 14px;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgba(26,52,80,0.4);
+  cursor: pointer;
+  transition: background 0.1s;
+  align-items: center;
+}
+.charles-row:hover { background: rgba(255,255,255,0.03) !important; }
+.charles-row.selected { background: rgba(0,207,255,0.06) !important; border-left-color: var(--cyan) !important; }
+
+.charles-row.status-ok       { border-left-color: var(--ch-ok); }
+.charles-row.status-redirect  { border-left-color: var(--ch-redirect); }
+.charles-row.status-client_error { border-left-color: var(--ch-warn); background: rgba(244,196,48,0.03); }
+.charles-row.status-server_error { border-left-color: var(--ch-error); background: rgba(255,77,77,0.05); }
+.charles-row.status-pending   { border-left-color: var(--ch-pending); }
+
+.ch-ts    { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+.ch-method {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: var(--cyan);
+}
+.ch-status {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+}
+.ch-status.ok       { color: var(--ch-ok); }
+.ch-status.redirect  { color: var(--ch-redirect); }
+.ch-status.client_error { color: var(--ch-warn); }
+.ch-status.server_error { color: var(--ch-error); }
+.ch-status.pending   { color: var(--ch-pending); }
+
+.ch-url {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-right: 8px;
+}
+.ch-duration {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-muted); text-align: right;
+}
+
+/* Charles empty state */
+#charles-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+#charles-empty.hidden { display: none; }
+#charles-empty p { font-family: var(--font-title); font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; }
+#charles-empty .sub { font-size: 11px; opacity: 0.6; text-align: center; line-height: 1.6; }
+
+/* ── Explanation panel ────────────────────────────────────────────── */
 
 #explain-panel {
   width: 360px;
@@ -748,6 +1144,188 @@ mark {
 }
 .explain-btn:hover { background: rgba(0,207,255,0.12); }
 
+/* Network request detail sections */
+.ep-section {
+  margin-bottom: 14px;
+}
+.ep-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ep-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.ep-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.5;
+  margin: 0;
+}
+.ep-url {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--cyan);
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 7px 10px;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.ep-net-overview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.ep-badge {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--card);
+  border: 1px solid var(--border2);
+}
+.ep-headers-toggle {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.ep-headers-toggle:hover { color: var(--cyan); }
+.ep-headers-list {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.8;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 5px;
+}
+.ep-hdr-name { color: var(--cyan-dim); }
+
+/* JSON syntax highlight */
+.json-key  { color: var(--cyan); }
+.json-str  { color: #86EFAC; }
+.json-num  { color: var(--gold); }
+.json-bool { color: #FB923C; }
+.json-null { color: var(--text-dim); font-style: italic; }
+
+/* ── Analytics event cards ────────────────────────────────────────── */
+.ep-analytics-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.ep-analytics-count {
+  background: rgba(249,115,22,0.15);
+  border: 1px solid rgba(249,115,22,0.35);
+  color: #FB923C;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.ep-event-card {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-left: 3px solid #FB923C;
+  border-radius: 5px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.ep-event-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: #FB923C;
+  margin-bottom: 7px;
+  letter-spacing: 0.02em;
+}
+.ep-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ep-event-meta span {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.ep-event-props {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+  margin-bottom: 8px;
+}
+.ep-prop-row {
+  display: flex;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.7;
+  border-bottom: 1px solid var(--border);
+  padding: 1px 0;
+}
+.ep-prop-key {
+  font-family: var(--font-mono);
+  color: var(--cyan-dim);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+.ep-prop-val {
+  color: var(--text);
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+.ep-bq-btn {
+  margin-top: 8px;
+  background: rgba(244,196,48,0.1);
+  border: 1px solid rgba(244,196,48,0.3);
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-transform: uppercase;
+}
+.ep-bq-btn:hover { background: rgba(244,196,48,0.2); }
+
 /* Row selected state */
 .log-row.selected {
   background: rgba(244,196,48,0.07) !important;
@@ -802,6 +1380,14 @@ mark {
         <span id="device-label">No Device</span>
       </div>
       <button id="refresh-btn" title="Refresh device connection">↺</button>
+
+      <div class="stats-divider"></div>
+
+      <div class="view-toggle">
+        <button class="view-btn active" data-view="both">◫ Both</button>
+        <button class="view-btn" data-view="logcat">◧ Logcat</button>
+        <button class="view-btn" data-view="charles">◨ Charles</button>
+      </div>
 
       <div id="pid-badge" class="pid-badge hidden">
         PID&nbsp;<span id="pid-val">—</span>
@@ -870,6 +1456,12 @@ mark {
   <!-- ── Log viewer + explanation panel ── -->
   <div id="main-area">
     <div id="log-container">
+      <div class="log-cols-header">
+        <span class="log-col-hdr sort-col active" id="log-time-hdr">Time <span class="sort-arrow">↓</span></span>
+        <span class="log-col-hdr">Lvl</span>
+        <span class="log-col-hdr">Tag</span>
+        <span class="log-col-hdr">Message</span>
+      </div>
       <div id="log-table"></div>
       <div id="empty-state">
         <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -881,6 +1473,58 @@ mark {
         </svg>
         <p id="empty-title">Waiting for Device</p>
         <span class="sub" id="empty-sub">Connect an Android device with Merge Cruise installed</span>
+      </div>
+    </div>
+
+    <!-- Draggable divider -->
+    <div id="view-divider"></div>
+
+    <!-- Network Traffic panel -->
+    <div id="charles-panel" class="hidden">
+      <div class="charles-header">
+        <span class="charles-status-dot" id="charles-dot"></span>
+        <span class="charles-header-title">Network Traffic</span>
+        <span class="charles-count" id="charles-count">0 requests</span>
+        <button class="charles-clear-btn" id="charles-clear-btn">Clear</button>
+      </div>
+      <div class="charles-filter-bar">
+        <button class="ch-preset-btn" data-filter="all">ALL</button>
+        <button class="ch-preset-btn active" data-filter="game">🎯 GAME API</button>
+        <button class="ch-preset-btn" data-filter="ads">📢 ADS SDKs</button>
+        <button class="ch-preset-btn" data-filter="analytics">📊 ANALYTICS</button>
+        <button class="ch-preset-btn" data-filter="errors">⚠ ERRORS 4xx/5xx</button>
+        <div class="ch-search-wrap">
+          <input type="text" id="ch-search" placeholder="host or path…" autocomplete="off">
+          <button id="ch-clear-search">✕</button>
+        </div>
+      </div>
+      <div class="charles-setup">
+        <label>PORT</label>
+        <input type="number" id="proxy-port-input" value="8082" min="1024" max="65535">
+        <button class="charles-connect-btn" id="proxy-start-btn">Start Proxy</button>
+        <a href="/api/proxy/cert" class="proxy-cert-link" id="proxy-cert-link" download>↓ SSL Cert</a>
+        <div class="proxy-guide" id="proxy-guide">
+          <span>Set Android proxy →</span>
+          <span class="proxy-guide-addr" id="proxy-guide-addr" title="Click to copy">—</span>
+        </div>
+      </div>
+      <div class="charles-cols">
+        <span class="charles-col-hdr sort-col active" id="ch-time-hdr">Time <span class="sort-arrow">↓</span></span>
+        <span class="charles-col-hdr">Method</span>
+        <span class="charles-col-hdr">Status</span>
+        <span class="charles-col-hdr">URL</span>
+        <span class="charles-col-hdr" style="text-align:right">Duration</span>
+      </div>
+      <div id="charles-table">
+        <div id="charles-empty">
+          <p>Proxy Not Running</p>
+          <span class="sub">
+            Click "Start Proxy", then set your Android<br>
+            device's Wi-Fi proxy to this machine's IP<br>
+            on the configured port. Install the SSL cert<br>
+            once to decrypt HTTPS traffic.
+          </span>
+        </div>
       </div>
     </div>
 
@@ -1052,15 +1696,17 @@ function makeRow(log) {
 // ── Append a single row (real-time) ──────────────────────────────────────────
 
 function appendRow(log) {
-  logTable.appendChild(makeRow(log));
-
-  // Trim DOM
-  while (logTable.children.length > MAX_DOM_ROWS) {
-    logTable.removeChild(logTable.firstChild);
-  }
-
-  if (autoScroll) {
-    logContainer.scrollTop = logContainer.scrollHeight;
+  const row = makeRow(log);
+  if (globalSortDesc) {
+    const first = logTable.firstChild;
+    if (first) logTable.insertBefore(row, first);
+    else logTable.appendChild(row);
+    while (logTable.children.length > MAX_DOM_ROWS) logTable.removeChild(logTable.lastChild);
+    if (autoScroll) logContainer.scrollTop = 0;
+  } else {
+    logTable.appendChild(row);
+    while (logTable.children.length > MAX_DOM_ROWS) logTable.removeChild(logTable.firstChild);
+    if (autoScroll) logContainer.scrollTop = logContainer.scrollHeight;
   }
 }
 
@@ -1070,14 +1716,19 @@ function rerender() {
   logTable.innerHTML = '';
 
   const matching = logs.filter(passesFilter);
-  const slice = matching.slice(-MAX_DOM_ROWS);
+  const slice = globalSortDesc
+    ? [...matching].reverse().slice(0, MAX_DOM_ROWS)
+    : matching.slice(-MAX_DOM_ROWS);
   const frag = document.createDocumentFragment();
   for (const log of slice) frag.appendChild(makeRow(log));
   logTable.appendChild(frag);
 
   updateStatus(matching.length);
 
-  if (autoScroll) logContainer.scrollTop = logContainer.scrollHeight;
+  if (autoScroll) {
+    if (globalSortDesc) logContainer.scrollTop = 0;
+    else logContainer.scrollTop = logContainer.scrollHeight;
+  }
 }
 
 // ── Add incoming log ─────────────────────────────────────────────────────────
@@ -1149,33 +1800,31 @@ const CAT_COLORS_MAP = {
 };
 
 function openExplainPanel(log, rowEl, autoExplain) {
-  // Deselect previous row
   if (selectedRow) selectedRow.classList.remove('selected');
+  if (selectedCharlesRow) { selectedCharlesRow.classList.remove('selected'); selectedCharlesRow = null; }
   selectedRow = rowEl;
   rowEl.classList.add('selected');
   selectedLog = log;
+  selectedNetworkEntry = null;
 
-  // Populate meta
-  const lv = log.level || '';
+  const lv  = log.level || '';
   const cat = log.category || 'system';
   epLevel.textContent = `${lv} — ${LEVEL_NAMES[lv] || lv}`;
   epLevel.style.color = lv === 'E' ? '#FF4D4D' : lv === 'W' ? '#F4C430' : '#D8EAF7';
   epTag.textContent = log.tag || '';
   epTag.style.color = CAT_COLORS_MAP[cat] || '#475569';
   epCat.textContent = cat.toUpperCase();
-  epTs.textContent = log.timestamp || '';
+  epTs.textContent  = log.timestamp || '';
   epMsg.textContent = log.message || '';
 
-  // Clear previous AI content
   epText.innerHTML = '';
   epText.style.display = 'none';
   epRerunBtn.style.display = 'none';
+  epRerunBtn.textContent = '↺ Re-analyze';
+  epRerunBtn.onclick = runExplain;
 
   explainPanel.classList.remove('hidden');
-
-  if (autoExplain) {
-    runExplain();
-  }
+  if (autoExplain) runExplain();
 }
 
 function runExplain() {
@@ -1188,11 +1837,25 @@ function runExplain() {
 
 socket.on('log_explanation', ({ explanation }) => {
   epLoading.style.display = 'none';
-  epText.style.display = 'block';
   epRerunBtn.style.display = 'inline-block';
-  // Render **bold** markdown
-  epText.innerHTML = escHtml(explanation)
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  if (selectedNetworkEntry) {
+    // Network mode: append Claude section below request/response data
+    const prev = epText.querySelector('.ep-claude-section');
+    if (prev) prev.remove();
+    const section = document.createElement('div');
+    section.className = 'ep-claude-section ep-section';
+    section.innerHTML =
+      `<div class="ep-section-label" style="color:var(--cyan)">Claude Analysis</div>` +
+      `<div class="explain-ai-text">${escHtml(explanation).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
+    epText.appendChild(section);
+    epText.style.display = 'block';
+  } else {
+    // Logcat mode: replace content with Claude explanation
+    epText.style.display = 'block';
+    epText.innerHTML = escHtml(explanation)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  }
 });
 
 document.getElementById('explain-close-btn').addEventListener('click', () => {
@@ -1201,7 +1864,7 @@ document.getElementById('explain-close-btn').addEventListener('click', () => {
   selectedLog = null;
 });
 
-epRerunBtn.addEventListener('click', runExplain);
+// epRerunBtn.onclick is set dynamically per context (logcat vs network)
 
 // ── Refresh button ───────────────────────────────────────────────────────────
 
@@ -1432,6 +2095,607 @@ document.getElementById('export-btn').addEventListener('click', () => {
 
   showToast(`Exported ${fmt(logs.length)} logs → ${filename}`);
 });
+
+// ── View toggle ──────────────────────────────────────────────────────────────
+
+const mainArea      = document.getElementById('main-area');
+const viewDivider   = document.getElementById('view-divider');
+const charlesPanel  = document.getElementById('charles-panel');
+let currentView = 'both';
+let savedRatio = parseFloat(localStorage.getItem('mc_split_ratio') || '0.5');
+
+function applyView(view) {
+  currentView = view;
+  document.querySelectorAll('.view-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.view === view));
+
+  if (view === 'both') {
+    logContainer.style.flex  = `0 0 ${savedRatio * 100}%`;
+    charlesPanel.classList.remove('hidden');
+    viewDivider.style.display = 'block';
+    charlesPanel.style.flex   = '1';
+  } else if (view === 'logcat') {
+    logContainer.style.flex  = '1';
+    charlesPanel.classList.add('hidden');
+    viewDivider.style.display = 'none';
+  } else {
+    logContainer.style.flex  = '0 0 0%';
+    charlesPanel.classList.remove('hidden');
+    charlesPanel.style.flex   = '1';
+    viewDivider.style.display = 'none';
+    logContainer.style.display = 'none';
+  }
+
+  if (view !== 'charles') logContainer.style.display = '';
+}
+
+document.querySelectorAll('.view-btn').forEach(btn => {
+  btn.addEventListener('click', () => applyView(btn.dataset.view));
+});
+
+// ── Draggable divider ─────────────────────────────────────────────────────────
+
+let isDragging = false;
+
+viewDivider.addEventListener('mousedown', (e) => {
+  isDragging = true;
+  viewDivider.classList.add('dragging');
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const rect = mainArea.getBoundingClientRect();
+  let ratio = (e.clientX - rect.left) / rect.width;
+  ratio = Math.max(0.2, Math.min(0.8, ratio));
+  savedRatio = ratio;
+  localStorage.setItem('mc_split_ratio', ratio);
+  logContainer.style.flex  = `0 0 ${ratio * 100}%`;
+  charlesPanel.style.flex  = '1';
+});
+
+document.addEventListener('mouseup', () => {
+  if (!isDragging) return;
+  isDragging = false;
+  viewDivider.classList.remove('dragging');
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+
+// ── Charles panel ─────────────────────────────────────────────────────────────
+
+const charlesDot     = document.getElementById('charles-dot');
+const charlesCountEl = document.getElementById('charles-count');
+const charlesTable   = document.getElementById('charles-table');
+const charlesEmpty   = document.getElementById('charles-empty');
+
+let charlesEntries     = [];
+let charlesTotal       = 0;
+let selectedCharlesRow = null;
+let charlesFilterMode  = 'game';  // default: game traffic only
+let charlesSearchText  = '';
+
+// ── Shared sort state (synced between logcat + network panels) ────────────────
+let globalSortDesc = true;   // true = newest at top
+
+function updateSortHeaders() {
+  const arrow = globalSortDesc ? '↓' : '↑';
+  document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = arrow);
+}
+
+function toggleSort() {
+  globalSortDesc = !globalSortDesc;
+  updateSortHeaders();
+  rerender();     // re-render logcat
+  recharles();    // re-render network
+}
+
+// ── Charles filter presets ────────────────────────────────────────────────────
+// Each preset is a pure domain/status filter — no overlap with logcat categories.
+const CH_PRESETS = {
+  // ALL: no filter
+  all: () => true,
+
+  // GAME API: Merge Cruise backend servers only (engine + game-api on mergecruiseserver.com)
+  game: e => /mergecruiseserver\.com/i.test(e.host),
+
+  // ADS SDKs: ad mediation & monetization networks
+  ads: e => /applovin\.com|applovinmax\.com|ironsrc\.com|is\.com|unityads\.unity3d|unity3d\.com\/ads|vungle|chartboost|adcolony|googleads\.g\.doubleclick|doubleclick\.net|googlesyndication|fbaudience|adnxs\.com|mopub/i.test(e.host),
+
+  // ANALYTICS: event tracking, crash reporting, attribution
+  analytics: e => /firebaselogging\.googleapis|firebaseio\.com|firebase\.google|mixpanel\.com|segment\.io|amplitude\.com|sentry\.io|appsflyer\.com|adjust\.com|kochava|tenjin\.io|singular\.net|braze\.com/i.test(e.host),
+
+  // ERRORS: any request that returned a 4xx or 5xx
+  errors: e => e.status >= 400,
+};
+
+function passesCharlesFilter(entry) {
+  if (!CH_PRESETS[charlesFilterMode]?.(entry)) return false;
+  if (charlesSearchText) {
+    const lo = charlesSearchText.toLowerCase();
+    if (!entry.host?.toLowerCase().includes(lo) &&
+        !entry.path?.toLowerCase().includes(lo) &&
+        !entry.url?.toLowerCase().includes(lo)) return false;
+  }
+  return true;
+}
+
+function recharles() {
+  charlesTable.querySelectorAll('.charles-row').forEach(r => r.remove());
+  const matching = charlesEntries.filter(passesCharlesFilter);
+  const slice    = globalSortDesc ? [...matching].reverse() : matching;
+  const frag     = document.createDocumentFragment();
+  slice.slice(-2000).forEach(e => frag.appendChild(makeCharlesRow(e)));
+  charlesTable.appendChild(frag);
+  charlesCountEl.textContent = `${matching.length} of ${charlesTotal}`;
+  if (matching.length > 0) charlesEmpty.classList.add('hidden');
+  else charlesEmpty.classList.remove('hidden');
+}
+
+const STATUS_LABELS = { ok:'2xx', redirect:'3xx', client_error:'4xx', server_error:'5xx', pending:'...' };
+
+function makeCharlesRow(entry) {
+  const div = document.createElement('div');
+  div.className = `charles-row status-${entry.status_cat}`;
+
+  const statusText = entry.status > 0 ? entry.status : '…';
+  const duration   = entry.duration > 0 ? `${entry.duration}ms` : '…';
+
+  // For Mixpanel /track requests, show event name(s) instead of raw path
+  let urlDisplay = entry.host + entry.path;
+  if (isMixpanelRequest(entry)) {
+    const events = parseMixpanelEvents(entry.req_body);
+    if (events && events.length) {
+      const names = events.map(e => e.event).filter(Boolean);
+      if (names.length === 1) {
+        urlDisplay = `${entry.host}  ·  ${names[0]}`;
+      } else if (names.length > 1) {
+        urlDisplay = `${entry.host}  ·  ${names[0]} +${names.length - 1} more`;
+      }
+    }
+  }
+  const url = escHtml(urlDisplay);
+
+  div.innerHTML =
+    `<span class="ch-ts">${escHtml(entry.ts)}</span>` +
+    `<span class="ch-method">${escHtml(entry.method)}</span>` +
+    `<span class="ch-status ${entry.status_cat}">${statusText}</span>` +
+    `<span class="ch-url" title="${escHtml(entry.url)}">${url}</span>` +
+    `<span class="ch-duration">${duration}</span>`;
+
+  div.addEventListener('click', () => {
+    if (selectedCharlesRow) selectedCharlesRow.classList.remove('selected');
+    selectedCharlesRow = div;
+    div.classList.add('selected');
+    openCharlesDetail(entry);
+  });
+
+  return div;
+}
+
+// ── Helpers for network detail ────────────────────────────────────────────────
+
+function extractBinaryStrings(bytes, minLen = 5) {
+  // Pull out printable ASCII runs (like the `strings` Unix command)
+  const results = [];
+  let run = '';
+  for (const b of bytes) {
+    if (b >= 0x20 && b <= 0x7E) { run += String.fromCharCode(b); }
+    else { if (run.length >= minLen) results.push(run); run = ''; }
+  }
+  if (run.length >= minLen) results.push(run);
+  // Deduplicate
+  return [...new Set(results)];
+}
+
+function decodeBase64Deep(obj, depth) {
+  if (depth > 4) return obj;
+  if (Array.isArray(obj))  return obj.map(v => decodeBase64Deep(v, depth + 1));
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = decodeBase64Deep(v, depth + 1);
+    return out;
+  }
+  if (typeof obj === 'string' && obj.length > 40 && /^[A-Za-z0-9+/\-_]+=*$/.test(obj)) {
+    try {
+      const bytes = Uint8Array.from(atob(obj.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+      // Try JSON first
+      try {
+        const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+        try { return decodeBase64Deep(JSON.parse(text), depth + 1); } catch {}
+      } catch {}
+      // Check if binary: count control chars (< 0x20, excluding tab/LF/CR)
+      const sample = bytes.slice(0, 200);
+      const ctrlCount = [...sample].filter(b => b < 0x20 && b !== 0x09 && b !== 0x0A && b !== 0x0D).length;
+      if (ctrlCount / sample.length > 0.12) {
+        // Binary (MessagePack, protobuf, etc.) — extract readable strings
+        const strs = extractBinaryStrings(bytes);
+        if (strs.length > 0) return `[binary ${bytes.length}B — strings: "${strs.join('", "')}"]`;
+        return `[binary: ${bytes.length} bytes]`;
+      }
+      // Mostly text
+      const text = new TextDecoder('utf-8', {fatal: false}).decode(bytes);
+      return `[base64→text: ${text}]`;
+    } catch {}
+  }
+  return obj;
+}
+
+function tryFormatJSON(raw) {
+  if (!raw || !raw.trim()) return raw || '';
+  try {
+    const parsed  = JSON.parse(raw);
+    const decoded = decodeBase64Deep(parsed, 0);
+    return JSON.stringify(decoded, null, 2);
+  } catch { return raw; }
+}
+
+function syntaxHighlightJSON(str) {
+  if (!str) return '';
+  // Escape HTML first, then wrap tokens in spans
+  const e = escHtml(str);
+  return e
+    // Keys: "someKey":
+    .replace(/(&quot;(?:[^&]|&(?!quot;))*&quot;)\s*(?=:)/g, '<span class="json-key">$1</span>')
+    // String values: : "someValue"
+    .replace(/(?<=:\s*)&quot;(?:[^&]|&(?!quot;))*&quot;/g, m => `<span class="json-str">${m}</span>`)
+    // Numbers
+    .replace(/(?<=:\s*)(-?\d+\.?\d*(?:[eE][+-]?\d+)?)\b/g, '<span class="json-num">$1</span>')
+    // Booleans
+    .replace(/(?<=:\s*)(true|false)\b/g, '<span class="json-bool">$1</span>')
+    // null
+    .replace(/(?<=:\s*)null\b/g, '<span class="json-null">null</span>');
+}
+
+function fmtSize(bytes) {
+  if (!bytes || bytes <= 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `(${(bytes/1024).toFixed(1)} KB)`;
+  return `${(bytes/1048576).toFixed(1)} MB`;
+}
+
+function renderHeaders(headers) {
+  if (!headers || !headers.length) return '<span style="color:var(--text-dim)">none</span>';
+  return headers.map(h =>
+    `<span class="ep-hdr-name">${escHtml(h.name)}</span>: ${escHtml(h.value)}`
+  ).join('<br>');
+}
+
+// ── Analytics request helpers ─────────────────────────────────────────────────
+
+const ANALYTICS_HOSTS = /mixpanel\.com|firebaselogging|firebase\.google|appsflyer\.com|adjust\.com|segment\.io|amplitude\.com/i;
+
+function isMixpanelRequest(entry) {
+  return /mixpanel\.com/i.test(entry.host) && entry.path && entry.path.includes('/track');
+}
+
+function parseMixpanelEvents(rawBody) {
+  if (!rawBody) return null;
+  // Form-encoded: data=[JSON] or data=base64
+  const m = rawBody.match(/(?:^|&|\?)data=([^&]+)/);
+  if (m) {
+    try {
+      const val = decodeURIComponent(m[1]);
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {}
+    // Maybe base64
+    try {
+      const val = decodeURIComponent(m[1]);
+      const decoded = atob(val.replace(/-/g,'+').replace(/_/g,'/'));
+      const parsed = JSON.parse(decoded);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {}
+  }
+  // Maybe body is already JSON array
+  try {
+    const parsed = JSON.parse(rawBody);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {}
+  return null;
+}
+
+// Properties shown prominently — ordered by QA relevance
+const ANALYTICS_KEY_PROPS = [
+  'chapter', 'theoretical_chapter', 'credit_balance', 'metapoint_balance',
+  'crowns_balance', 'eoc_points_balance',
+  'item_name', 'item_id', 'item_level', 'item_sale_cost',
+  'fps_average', 'fps_current', 'fps_max_ms',
+  '$app_version_string', '$os_version', '$model',
+  'mode_status', 'end_of_content', 'board_full',
+  'internet_on', 'batter_level', 'suspected_cheater',
+];
+
+function buildBQQuery(ev, props) {
+  const userId    = props.distinct_id || props.user_id || '';
+  const eventName = ev.event || '';
+  const ts        = props.time ? Math.floor(props.time) : null;
+  const timeClause = ts
+    ? `\n  AND event_timestamp BETWEEN TIMESTAMP_SECONDS(${ts} - 300)\n                       AND TIMESTAMP_SECONDS(${ts} + 300)`
+    : '';
+  return `SELECT *\nFROM \`vmp_master_event_normalized\`\nWHERE user_id = '${userId}'\n  AND event_name = '${eventName}'${timeClause}\nORDER BY event_timestamp DESC\nLIMIT 20`;
+}
+
+function copyBQQuery(query) {
+  navigator.clipboard.writeText(query)
+    .then(() => showToast('BQ query copied — paste it into Claude Code'))
+    .catch(() => showToast('Could not copy — check browser permissions'));
+}
+
+function renderAnalyticsEvents(events, entry) {
+  let html = `<div class="ep-analytics-summary">`;
+  html += `<span class="ep-analytics-count">📊 ${events.length} event${events.length > 1 ? 's' : ''}</span>`;
+  html += `<span>sent to ${escHtml(entry.host)}</span>`;
+  html += `</div>`;
+
+  for (const ev of events) {
+    const p   = ev.properties || {};
+    const uid = p.distinct_id || p.user_id || '—';
+    const ts  = p.time ? new Date(p.time * 1000).toLocaleTimeString() : '—';
+    const ver = p['$app_version_string'] || '';
+
+    html += `<div class="ep-event-card">`;
+    html += `<div class="ep-event-name">${escHtml(ev.event || '(unknown)')}</div>`;
+
+    // Meta badges
+    html += `<div class="ep-event-meta">`;
+    html += `<span>👤 ${escHtml(uid)}</span>`;
+    html += `<span>🕐 ${escHtml(ts)}</span>`;
+    if (p.chapter    != null) html += `<span>📍 Ch.${p.chapter}</span>`;
+    if (ver)                  html += `<span>v${escHtml(ver)}</span>`;
+    html += `</div>`;
+
+    // Key properties grid
+    const keyRows = ANALYTICS_KEY_PROPS
+      .filter(k => p[k] != null && k !== '$app_version_string')
+      .map(k => [k, p[k]]);
+    if (keyRows.length) {
+      html += `<div class="ep-event-props">`;
+      for (const [k, v] of keyRows) {
+        const display = typeof v === 'boolean'
+          ? `<span style="color:${v ? 'var(--ch-ok)' : 'var(--lv-e)'}">${v}</span>`
+          : `<span class="ep-prop-val">${escHtml(String(v))}</span>`;
+        html += `<div class="ep-prop-row"><span class="ep-prop-key">${escHtml(k)}</span>${display}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // All properties (collapsible)
+    const allProps = JSON.stringify(p, null, 2);
+    html += `<div class="ep-section-label" style="margin-top:8px;font-size:10px">All properties <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
+    html += `<div style="display:none"><pre class="ep-code">${syntaxHighlightJSON(allProps)}</pre></div>`;
+
+    // BQ button
+    const q = buildBQQuery(ev, p);
+    html += `<button class="ep-bq-btn" onclick="copyBQQuery(${JSON.stringify(q)})">📋 Copy BQ Query</button>`;
+    html += `</div>`;
+  }
+  return html;
+}
+
+let selectedNetworkEntry = null;
+
+function openCharlesDetail(entry) {
+  if (selectedRow) { selectedRow.classList.remove('selected'); selectedRow = null; }
+  selectedLog = null;
+  selectedNetworkEntry = entry;
+
+  const statusColor = {
+    ok: 'var(--ch-ok)', redirect: 'var(--ch-redirect)',
+    client_error: 'var(--ch-warn)', server_error: 'var(--ch-error)',
+  }[entry.status_cat] || 'var(--text)';
+
+  // Populate header meta fields
+  epLevel.textContent = `${entry.method}  ${entry.status || '…'}`;
+  epLevel.style.color = statusColor;
+  epTag.textContent   = entry.host;
+  epTag.style.color   = 'var(--cyan)';
+  epCat.textContent   = entry.ts;
+  epTs.textContent    = `${entry.duration > 0 ? entry.duration + 'ms' : '—'}  ${fmtSize(entry.size)}`;
+
+  // Replace message box with full URL
+  epMsg.textContent = entry.url;
+
+  // Build rich body content
+  const reqFmt  = tryFormatJSON(entry.req_body);
+  const respFmt = tryFormatJSON(entry.resp_body);
+
+  let html = '';
+
+  // ── Mixpanel / analytics: dedicated event view ──────────────────────────────
+  if (isMixpanelRequest(entry)) {
+    const events = parseMixpanelEvents(entry.req_body);
+    if (events && events.length) {
+      html += renderAnalyticsEvents(events, entry);
+      // Still show request headers collapsed
+      html += `<div class="ep-section" style="margin-top:8px">`;
+      html += `<div class="ep-section-label" style="font-size:10px">Request Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
+      html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.req_headers)}</div>`;
+      html += `</div>`;
+      epLoading.style.display = 'none';
+      epText.innerHTML = html;
+      epText.style.display = 'block';
+      epRerunBtn.style.display = 'none'; // Claude analyze not needed for analytics
+      explainPanel.classList.remove('hidden');
+      return;
+    }
+  }
+
+  // ── Default: generic request/response view ──────────────────────────────────
+  // Request section
+  html += `<div class="ep-section">`;
+  html += `<div class="ep-section-label">Request Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
+  html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.req_headers)}</div>`;
+  if (reqFmt) {
+    html += `<div class="ep-section-label" style="margin-top:8px">Request Body</div>`;
+    html += `<pre class="ep-code">${syntaxHighlightJSON(reqFmt.slice(0, 3000))}</pre>`;
+  }
+  html += `</div>`;
+
+  // Response section
+  html += `<div class="ep-section">`;
+  html += `<div class="ep-section-label">Response Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
+  html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.resp_headers)}</div>`;
+  if (respFmt) {
+    html += `<div class="ep-section-label" style="margin-top:8px">Response Body</div>`;
+    html += `<pre class="ep-code">${syntaxHighlightJSON(respFmt.slice(0, 3000))}</pre>`;
+  } else {
+    html += `<span style="color:var(--text-dim);font-size:11px">No response body captured</span>`;
+  }
+  html += `</div>`;
+
+  epLoading.style.display = 'none';
+  epText.innerHTML = html;
+  epText.style.display = 'block';
+
+  // Claude button — always available, auto-triggers on errors
+  epRerunBtn.style.display = 'inline-block';
+  epRerunBtn.textContent   = '⚡ Analyze with Claude';
+  epRerunBtn.onclick = () => analyzeNetworkRequest(entry);
+
+  explainPanel.classList.remove('hidden');
+
+  // Auto-analyze errors
+  if (entry.status_cat === 'server_error' || entry.status_cat === 'client_error') {
+    analyzeNetworkRequest(entry);
+  }
+}
+
+function analyzeNetworkRequest(entry) {
+  epLoading.style.display = 'flex';
+  socket.emit('explain_request', entry);
+}
+
+
+function addCharlesEntry(entry) {
+  charlesEntries.push(entry);
+  if (charlesEntries.length > 5000) charlesEntries.shift();
+  charlesTotal++;
+
+  const matchCount = charlesEntries.filter(passesCharlesFilter).length;
+  charlesCountEl.textContent = `${matchCount} of ${charlesTotal}`;
+
+  if (!passesCharlesFilter(entry)) return;
+
+  charlesEmpty.classList.add('hidden');
+  const row = makeCharlesRow(entry);
+
+  if (globalSortDesc) {
+    const first = charlesTable.querySelector('.charles-row');
+    if (first) charlesTable.insertBefore(row, first);
+    else charlesTable.appendChild(row);
+    const rows = charlesTable.querySelectorAll('.charles-row');
+    if (rows.length > 2000) rows[rows.length - 1].remove();
+    if (autoScroll && currentView !== 'logcat') charlesTable.scrollTop = 0;
+  } else {
+    charlesTable.appendChild(row);
+    const rows = charlesTable.querySelectorAll('.charles-row');
+    if (rows.length > 2000) rows[0].remove();
+    if (autoScroll && currentView !== 'logcat')
+      charlesTable.scrollTop = charlesTable.scrollHeight;
+  }
+}
+
+socket.on('charles_entry', (entry) => addCharlesEntry(entry));
+
+socket.on('charles_batch', (batch) => {
+  if (!batch || !batch.length) return;
+  batch.forEach(e => { charlesEntries.push(e); charlesTotal++; });
+  recharles();
+});
+
+const proxyPortInput  = document.getElementById('proxy-port-input');
+const proxyStartBtn   = document.getElementById('proxy-start-btn');
+const proxyCertLink   = document.getElementById('proxy-cert-link');
+const proxyGuide      = document.getElementById('proxy-guide');
+const proxyGuideAddr  = document.getElementById('proxy-guide-addr');
+
+function applyProxyStatus({ running, port, local_ip, cert_available }) {
+  charlesDot.classList.toggle('watching', running);
+  proxyStartBtn.textContent = running ? 'Stop Proxy' : 'Start Proxy';
+  proxyStartBtn.classList.toggle('running', running);
+  proxyPortInput.disabled = running;
+
+  if (running) {
+    const addr = `${local_ip || '…'}:${port}`;
+    proxyGuideAddr.textContent = addr;
+    proxyGuide.classList.add('visible');
+    proxyCertLink.classList.add('visible');
+    if (currentView === 'logcat') applyView('both');
+    charlesEmpty.classList.add('hidden');
+  } else {
+    proxyGuide.classList.remove('visible');
+  }
+
+  if (cert_available) proxyCertLink.classList.add('visible');
+}
+
+socket.on('proxy_status', applyProxyStatus);
+
+socket.on('charles_cleared', () => {
+  charlesEntries = [];
+  charlesTotal   = 0;
+  charlesCountEl.textContent = '0 requests';
+  charlesTable.querySelectorAll('.charles-row').forEach(r => r.remove());
+  charlesEmpty.classList.remove('hidden');
+});
+
+proxyStartBtn.addEventListener('click', () => {
+  if (proxy_state_running) {
+    socket.emit('stop_proxy');
+  } else {
+    const port = parseInt(proxyPortInput.value) || 8082;
+    socket.emit('start_proxy', { port });
+  }
+});
+
+// Click proxy address to copy
+proxyGuideAddr.addEventListener('click', () => {
+  navigator.clipboard.writeText(proxyGuideAddr.textContent).then(() => {
+    showToast('Proxy address copied');
+  });
+});
+
+document.getElementById('charles-clear-btn').addEventListener('click', () => {
+  socket.emit('clear_charles');
+});
+
+// ── Sort headers (shared — clicking either syncs both panels) ────────────────
+document.getElementById('log-time-hdr').addEventListener('click', toggleSort);
+document.getElementById('ch-time-hdr').addEventListener('click', toggleSort);
+
+// ── Charles filter presets ────────────────────────────────────────────────────
+document.querySelectorAll('.ch-preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    charlesFilterMode = btn.dataset.filter;
+    document.querySelectorAll('.ch-preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    recharles();
+  });
+});
+
+// ── Charles search ────────────────────────────────────────────────────────────
+const chSearch      = document.getElementById('ch-search');
+const chClearSearch = document.getElementById('ch-clear-search');
+let chSearchTimer;
+chSearch.addEventListener('input', () => {
+  charlesSearchText = chSearch.value.trim();
+  chClearSearch.classList.toggle('visible', charlesSearchText.length > 0);
+  clearTimeout(chSearchTimer);
+  chSearchTimer = setTimeout(recharles, 160);
+});
+chClearSearch.addEventListener('click', () => {
+  chSearch.value = '';
+  charlesSearchText = '';
+  chClearSearch.classList.remove('visible');
+  recharles();
+});
+
+// Track running state for button toggle
+let proxy_state_running = false;
+socket.on('proxy_status', ({ running }) => { proxy_state_running = running; });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 // Don't set empty state here — pollDeviceStatus() handles initial state async

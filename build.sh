@@ -19,7 +19,7 @@ echo "  ────────────────────────
 
 # 1. Ensure dependencies
 echo "  → Checking dependencies..."
-pip3 install -q pyinstaller flask flask-socketio anthropic
+pip3 install -q pyinstaller flask flask-socketio anthropic mitmproxy
 
 # 2. Clean previous build
 echo "  → Cleaning previous build..."

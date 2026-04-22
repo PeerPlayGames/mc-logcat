@@ -3,14 +3,25 @@
 Merge Cruise Logcat Viewer — PeerPlay DevTools
 """
 
+import json
 import os
 import re
 import subprocess
 import threading
 import time
-from datetime import datetime
-from flask import Flask, render_template
+from datetime import datetime, timezone
+from flask import Flask, render_template, jsonify
 from flask_socketio import SocketIO, emit
+
+# ── Load .env file if present (for ANTHROPIC_API_KEY etc.) ──────────────────
+_env_path = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(_env_path):
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _, _v = _line.partition('=')
+                os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mc-logcat-peerplay-2025'
@@ -29,6 +40,22 @@ state = {
     'lock': threading.Lock(),
     'logcat_stop': threading.Event(),
 }
+
+# ── Network traffic proxy state ──────────────────────────────────────────────
+
+charles = {
+    'entries_buffer': [],       # last 2000 entries in memory
+    'lock': threading.Lock(),
+}
+
+proxy_state = {
+    'running': False,
+    'port': 8082,
+    'master': None,
+}
+
+import queue as _queue_mod
+_proxy_emit_queue = _queue_mod.Queue()
 
 # ── Tag categorisation ──────────────────────────────────────────────────────
 
@@ -290,6 +317,147 @@ def device_monitor():
         time.sleep(2)
 
 
+# ── Embedded HTTP/HTTPS proxy (mitmproxy) ────────────────────────────────────
+
+def _proxy_status_cat(code: int) -> str:
+    if code == 0:    return 'pending'
+    if code < 300:   return 'ok'
+    if code < 400:   return 'redirect'
+    if code < 500:   return 'client_error'
+    return 'server_error'
+
+
+def _proxy_emit_worker():
+    """Drain the cross-thread queue and push to Socket.IO."""
+    while True:
+        try:
+            entry = _proxy_emit_queue.get(timeout=0.2)
+            with charles['lock']:
+                charles['entries_buffer'].append(entry)
+                if len(charles['entries_buffer']) > 2000:
+                    charles['entries_buffer'] = charles['entries_buffer'][-2000:]
+            socketio.emit('charles_entry', entry)
+        except _queue_mod.Empty:
+            pass
+        except Exception:
+            pass
+
+
+def _run_proxy_thread(port: int):
+    try:
+        import asyncio
+        from mitmproxy.options import Options
+        from mitmproxy.tools.dump import DumpMaster
+        from mitmproxy import http as mhttp
+        from urllib.parse import urlparse
+
+        def _safe_body(msg, max_len=4000):
+            """Decode HTTP body to a clean UTF-8 string, treating binary as a placeholder."""
+            raw = msg.content
+            if not raw:
+                return ''
+            ct = msg.headers.get('content-type', '').lower()
+            # Explicitly binary content types — don't attempt to decode
+            if any(x in ct for x in ('image/', 'video/', 'audio/', 'octet-stream',
+                                       'protobuf', 'grpc', 'wasm')):
+                return f'[binary: {len(raw)} bytes]'
+            # Decode bytes; use replace so bad bytes become \ufffd, not surrogates
+            text = raw.decode('utf-8', errors='replace')
+            # If majority of first 200 chars are non-printable → binary blob
+            sample = text[:200]
+            printable = sum(1 for c in sample if c.isprintable() or c in '\n\r\t ')
+            if sample and printable / len(sample) < 0.6:
+                return f'[binary: {len(raw)} bytes]'
+            return text[:max_len]
+
+        class TrafficAddon:
+            def response(self, flow: mhttp.HTTPFlow) -> None:
+                try:
+                    url    = flow.request.pretty_url
+                    parsed = urlparse(url)
+                    t0     = getattr(flow.request,  'timestamp_start', 0) or 0
+                    t1     = getattr(flow.response, 'timestamp_end',   0) or 0
+                    dur    = round((t1 - t0) * 1000) if t1 > t0 else 0
+                    status = flow.response.status_code
+
+                    # Use request START time so timestamps align with logcat
+                    ts_dt = datetime.fromtimestamp(t0) if t0 > 0 else datetime.now()
+                    ts    = ts_dt.strftime('%m-%d %H:%M:%S.') + f'{ts_dt.microsecond // 1000:03d}'
+
+                    entry = {
+                        'ts':          ts,
+                        'ts_epoch':    t0 if t0 > 0 else ts_dt.timestamp(),
+                        'method':      flow.request.method,
+                        'url':         url,
+                        'host':        parsed.netloc,
+                        'path':        parsed.path + (f'?{parsed.query}' if parsed.query else ''),
+                        'status':      status,
+                        'status_cat':  _proxy_status_cat(status),
+                        'duration':    dur,
+                        'size':        len(flow.response.content) if flow.response.content else 0,
+                        'req_headers': [{'name': k, 'value': v} for k, v in flow.request.headers.items()],
+                        'req_body':    _safe_body(flow.request),
+                        'resp_headers':[{'name': k, 'value': v} for k, v in flow.response.headers.items()],
+                        'resp_body':   _safe_body(flow.response),
+                    }
+                    _proxy_emit_queue.put(entry)
+                except Exception:
+                    pass
+
+        async def _run():
+            opts   = Options(listen_host='0.0.0.0', listen_port=port, ssl_insecure=True)
+            master = DumpMaster(opts, with_termlog=False, with_dumper=False)
+            master.addons.add(TrafficAddon())
+            proxy_state['master'] = master
+            await master.run()
+
+        asyncio.run(_run())
+
+    except ImportError:
+        socketio.emit('sys_msg', {
+            'text': 'mitmproxy not installed — run: pip3 install mitmproxy',
+            'type': 'error'
+        })
+    except Exception as e:
+        if proxy_state['running']:
+            socketio.emit('sys_msg', {'text': f'Proxy error: {e}', 'type': 'error'})
+    finally:
+        proxy_state['running'] = False
+        proxy_state['master']  = None
+        socketio.emit('proxy_status', {'running': False, 'port': proxy_state['port']})
+
+
+def start_proxy(port: int = 8082):
+    stop_proxy()
+    proxy_state['port']    = port
+    proxy_state['running'] = True
+    threading.Thread(target=_run_proxy_thread, args=(port,), daemon=True).start()
+
+
+def stop_proxy():
+    proxy_state['running'] = False
+    master = proxy_state.get('master')
+    if master:
+        try:
+            master.shutdown()
+        except Exception:
+            pass
+    proxy_state['master'] = None
+
+
+def get_local_ip() -> str:
+    import socket as _sock
+    try:
+        s = _sock.socket(_sock.AF_INET, _sock.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        return s.getsockname()[0]
+    except Exception:
+        return '127.0.0.1'
+    finally:
+        try: s.close()
+        except: pass
+
+
 # ── Claude explanation ───────────────────────────────────────────────────────
 
 def explain_log_with_claude(log: dict) -> str:
@@ -392,17 +560,146 @@ def on_clear():
     socketio.emit('logs_cleared')
 
 
+@socketio.on('start_proxy')
+def on_start_proxy(data):
+    port = int((data or {}).get('port', 8082))
+    start_proxy(port)
+    emit('proxy_status', {'running': True, 'port': port, 'local_ip': get_local_ip()})
+    # Send buffered entries to this new client
+    with charles['lock']:
+        batch = list(charles['entries_buffer'][-200:])
+    if batch:
+        emit('charles_batch', batch)
+
+
+@socketio.on('stop_proxy')
+def on_stop_proxy():
+    stop_proxy()
+    emit('proxy_status', {'running': False, 'port': proxy_state['port'], 'local_ip': get_local_ip()})
+
+
+@socketio.on('clear_charles')
+def on_clear_charles():
+    with charles['lock']:
+        charles['entries_buffer'].clear()
+    socketio.emit('charles_cleared')
+
+
+@app.route('/api/proxy/status')
+def api_proxy_status():
+    cert_path = os.path.expanduser('~/.mitmproxy/mitmproxy-ca-cert.pem')
+    return jsonify({
+        'running':        proxy_state['running'],
+        'port':           proxy_state['port'],
+        'local_ip':       get_local_ip(),
+        'count':          len(charles['entries_buffer']),
+        'cert_available': os.path.exists(cert_path),
+    })
+
+
+@app.route('/api/proxy/cert')
+def api_proxy_cert():
+    cert_path = os.path.expanduser('~/.mitmproxy/mitmproxy-ca-cert.pem')
+    if not os.path.exists(cert_path):
+        return jsonify({'error': 'Start the proxy first to generate the cert'}), 404
+    from flask import send_file
+    return send_file(cert_path, as_attachment=True,
+                     download_name='mitmproxy-ca-cert.pem',
+                     mimetype='application/x-pem-file')
+
+
 @socketio.on('explain_log')
 def on_explain(log_data):
     explanation = explain_log_with_claude(log_data)
     emit('log_explanation', {'explanation': explanation})
 
 
+@socketio.on('explain_request')
+def on_explain_request(req):
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.environ.get('ANTHROPIC_API_KEY'))
+
+        def _extract_binary_strings(data: bytes, min_len=5):
+            import re as _re
+            return list(dict.fromkeys(  # dedupe preserving order
+                s.decode() for s in _re.findall(rb'[ -~]{' + str(min_len).encode() + rb',}', data)
+            ))
+
+        def _decode_b64_deep(obj, depth=0):
+            import base64 as _b64, re as _re
+            if depth > 4: return obj
+            if isinstance(obj, list):  return [_decode_b64_deep(v, depth+1) for v in obj]
+            if isinstance(obj, dict):  return {k: _decode_b64_deep(v, depth+1) for k, v in obj.items()}
+            if isinstance(obj, str) and len(obj) > 40 and _re.match(r'^[A-Za-z0-9+/\-_]+=*$', obj):
+                try:
+                    raw = _b64.b64decode(obj.replace('-','+').replace('_','/') + '==')
+                    # Try JSON first
+                    try: return _decode_b64_deep(json.loads(raw), depth+1)
+                    except: pass
+                    # Check for binary (control chars > 12% of first 200 bytes)
+                    sample = raw[:200]
+                    ctrl = sum(1 for b in sample if b < 0x20 and b not in (0x09, 0x0A, 0x0D))
+                    if ctrl / max(len(sample), 1) > 0.12:
+                        strs = _extract_binary_strings(raw)
+                        if strs: return f'[binary {len(raw)}B — strings: {", ".join(repr(s) for s in strs)}]'
+                        return f'[binary: {len(raw)} bytes]'
+                    return f'[base64→text: {raw.decode("utf-8", errors="replace")}]'
+                except: pass
+            return obj
+
+        def fmt_body(raw):
+            if not raw: return ''
+            safe = raw.encode('utf-8', errors='replace').decode('utf-8')
+            try: return json.dumps(_decode_b64_deep(json.loads(safe)), indent=2)[:2000]
+            except: return safe[:2000]
+
+        req_body  = fmt_body(req.get('req_body', ''))
+        resp_body = fmt_body(req.get('resp_body', ''))
+
+        status_label = {
+            'ok': 'Success (2xx)', 'redirect': 'Redirect (3xx)',
+            'client_error': 'Client Error (4xx)', 'server_error': 'Server Error (5xx)',
+        }.get(req.get('status_cat',''), str(req.get('status','')))
+
+        prompt = (
+            f"You are a mobile QA expert analyzing HTTP traffic from "
+            f"\"Merge Cruise\", a Unity-based mobile game by PeerPlay.\n\n"
+            f"Analyze this network request:\n"
+            f"  Method:   {req.get('method')}\n"
+            f"  URL:      {req.get('url')}\n"
+            f"  Status:   {req.get('status')} — {status_label}\n"
+            f"  Duration: {req.get('duration')}ms\n"
+            f"  Size:     {req.get('size', 0)} bytes\n"
+        )
+        if req_body:
+            prompt += f"\nRequest body:\n{req_body}\n"
+        if resp_body:
+            prompt += f"\nResponse body:\n{resp_body}\n"
+
+        prompt += (
+            "\nRespond in this exact format:\n"
+            "**What this call does:** (what the endpoint is for — be specific about game feature)\n"
+            "**What the response means:** (interpret status + key fields from the response body)\n"
+            "**Action needed:** (None / Monitor / Investigate / Fix immediately — with reason)\n\n"
+            "Be concise. If the response body contains error details, explain them specifically."
+        )
+
+        response = client.messages.create(
+            model='claude-haiku-4-5-20251001',
+            max_tokens=450,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+        emit('log_explanation', {'explanation': response.content[0].text})
+    except Exception as e:
+        emit('log_explanation', {'explanation': f'Could not get explanation: {e}'})
+
+
 # ── Entry point ─────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    t = threading.Thread(target=device_monitor, daemon=True)
-    t.start()
+    threading.Thread(target=device_monitor, daemon=True).start()
+    threading.Thread(target=_proxy_emit_worker, daemon=True).start()
 
     print('\n  ⚓  Merge Cruise Logcat Server — PeerPlay DevTools')
     print('  🌊  http://localhost:5001\n')
