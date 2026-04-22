@@ -2415,7 +2415,7 @@ function buildBQQuery(ev, props) {
   const timeClause = ts
     ? `\n  AND event_timestamp BETWEEN TIMESTAMP_SECONDS(${ts} - 300)\n                       AND TIMESTAMP_SECONDS(${ts} + 300)`
     : '';
-  return `SELECT *\nFROM \`vmp_master_event_normalized\`\nWHERE user_id = '${userId}'\n  AND event_name = '${eventName}'${timeClause}\nORDER BY event_timestamp DESC\nLIMIT 20`;
+  return `SELECT *\nFROM \`yotam-395120.peerplay_stg.vmp_master_event_normalized\`\nWHERE user_id = '${userId}'\n  AND event_name = '${eventName}'${timeClause}\nORDER BY event_timestamp DESC\nLIMIT 20`;
 }
 
 function copyBQQuery(query) {
