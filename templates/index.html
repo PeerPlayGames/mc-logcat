@@ -28,12 +28,12 @@
   --teal:       #00D4B4;
 
   --text:       #D8EAF7;
-  --text-muted: #5A7A99;
-  --text-dim:   #3A5A75;
+  --text-muted: #8AAFC8;
+  --text-dim:   #6A90AB;
 
   /* Level colours */
-  --lv-v:  #334155;
-  --lv-d:  #4A6480;
+  --lv-v:  #4A6480;
+  --lv-d:  #6A90AB;
   --lv-i:  #00CFFF;
   --lv-w:  #F4C430;
   --lv-e:  #FF4D4D;
@@ -435,10 +435,31 @@ header::after {
   color: var(--gold);
   background: var(--gold-glow);
 }
-#clear-btn:hover {
-  border-color: var(--lv-e);
-  color: var(--lv-e);
-  background: rgba(255,77,77,0.08);
+/* ── Logcat mini-header (mirrors charles-header) ─────────────────── */
+.logcat-header {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 14px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border2);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.logcat-header-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.logcat-count {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-right: auto;
 }
 
 /* ── Log col header (sticky sort row) ────────────────────────────── */
@@ -446,7 +467,7 @@ header::after {
   display: grid;
   grid-template-columns: 168px 30px 185px 1fr;
   position: sticky;
-  top: 0;
+  top: 36px;   /* offset by logcat-header height */
   z-index: 5;
   background: var(--surface);
   border-bottom: 1px solid var(--border2);
@@ -654,11 +675,21 @@ mark {
 /* ── Main area ────────────────────────────────────────────────────── */
 #main-area {
   display: flex;
+  flex-direction: column;
   flex: 1;
   overflow: hidden;
 }
 
-/* ── Draggable divider ────────────────────────────────────────────── */
+#top-area {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* (h-divider + analytics panel removed) */
+
+/* ── Vertical draggable divider (logcat / charles split) ──────────── */
 #view-divider {
   width: 6px;
   flex-shrink: 0;
@@ -745,6 +776,29 @@ mark {
   transition: color 0.15s;
 }
 .charles-clear-btn:hover { color: var(--lv-e); }
+.pause-btn {
+  padding: 5px 11px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  letter-spacing: 0.04em;
+}
+.pause-btn:hover { border-color: var(--ch-warn); color: var(--ch-warn); background: rgba(244,196,48,0.08); }
+.pause-btn.paused { border-color: var(--ch-warn); color: var(--ch-warn); background: rgba(244,196,48,0.08); }
+.ch-pause-btn {
+  background: none; border: 1px solid var(--border2);
+  color: var(--text-dim); cursor: pointer;
+  font-size: 11px; font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+.ch-pause-btn:hover { color: var(--ch-warn); border-color: var(--ch-warn); }
+.ch-pause-btn.paused { color: var(--ch-warn); border-color: var(--ch-warn); background: rgba(244,196,48,0.07); }
 
 /* Charles filter bar */
 .charles-filter-bar {
@@ -868,28 +922,71 @@ mark {
 }
 .proxy-cert-link:hover { color: var(--gold); border-color: var(--gold-dim); }
 .proxy-cert-link.visible { display: inline-flex; align-items: center; gap: 4px; }
-/* Proxy address guide (shown when running) */
+/* Proxy address guide (always visible so user knows what to configure) */
 .proxy-guide {
   margin-left: auto;
-  display: none;
+  display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
   color: var(--text-muted);
 }
-.proxy-guide.visible { display: flex; }
 .proxy-guide-addr {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--ch-ok);
-  background: rgba(34,197,94,0.08);
-  border: 1px solid rgba(34,197,94,0.25);
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 4px;
   padding: 2px 8px;
   cursor: pointer;
   user-select: all;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
-.proxy-guide-addr:hover { background: rgba(34,197,94,0.14); }
+.proxy-guide.running .proxy-guide-addr {
+  color: var(--ch-ok);
+  background: rgba(34,197,94,0.08);
+  border-color: rgba(34,197,94,0.25);
+}
+.proxy-guide.running .proxy-guide-addr:hover { background: rgba(34,197,94,0.14); }
+.proxy-guide-addr:hover { background: rgba(255,255,255,0.08); }
+
+/* Device proxy buttons */
+.device-proxy-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid rgba(34,197,94,0.4);
+  background: rgba(34,197,94,0.06);
+  color: #4ade80;
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.device-proxy-btn:hover { background: rgba(34,197,94,0.14); }
+.device-proxy-btn.clear {
+  border-color: rgba(255,77,77,0.35);
+  background: rgba(255,77,77,0.06);
+  color: var(--lv-e);
+}
+.device-proxy-btn.clear:hover { background: rgba(255,77,77,0.14); }
+.device-proxy-btn:disabled {
+  opacity: 0.5; cursor: wait;
+}
+
+/* Prominent clear button for charles panel */
+.charles-clear-btn.prominent {
+  padding: 3px 10px;
+  border: 1px solid rgba(255,77,77,0.3);
+  border-radius: 4px;
+  color: var(--lv-e);
+  font-size: 11px;
+  background: rgba(255,77,77,0.06);
+}
+.charles-clear-btn.prominent:hover {
+  background: rgba(255,77,77,0.14);
+  border-color: rgba(255,77,77,0.5);
+}
 
 /* Charles columns header */
 .charles-cols {
@@ -971,6 +1068,10 @@ mark {
   font-family: var(--font-mono); font-size: 11px;
   color: var(--text-muted); text-align: right;
 }
+.ch-repeat-badge {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--gold); opacity: 0.75; margin-left: 5px;
+}
 
 /* Charles empty state */
 #charles-empty {
@@ -987,130 +1088,141 @@ mark {
 #charles-empty p { font-family: var(--font-title); font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; }
 #charles-empty .sub { font-size: 11px; opacity: 0.6; text-align: center; line-height: 1.6; }
 
-/* ── Explanation panel ────────────────────────────────────────────── */
+/* ── Analytics panel (bottom, permanent) ─────────────────────────── */
+/* (analytics panel CSS removed) */
 
-#explain-panel {
-  width: 360px;
-  flex-shrink: 0;
+/* ── Detail modal overlay ────────────────────────────────────────── */
+
+#modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 500;
+  display: none;
+  backdrop-filter: blur(2px);
+}
+#modal-backdrop.visible { display: block; }
+
+#detail-modal {
+  position: fixed;
+  top: 5vh; left: 5vw;
+  width: 90vw; height: 90vh;
   background: var(--surface);
-  border-left: 1px solid var(--border);
-  display: flex;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  z-index: 501;
+  display: none;
   flex-direction: column;
-  transition: width 0.25s ease;
   overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
-#explain-panel.hidden {
-  width: 0;
-  border-left: none;
-}
+#detail-modal.visible { display: flex; }
 
-.explain-header {
+.modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px 10px;
+  padding: 14px 20px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  background: var(--panel);
 }
-.explain-header-title {
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.modal-header-title {
   font-family: var(--font-title);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--gold);
   text-transform: uppercase;
 }
-.explain-close {
-  background: none; border: none;
-  color: var(--text-muted); cursor: pointer;
-  font-size: 16px; line-height: 1; padding: 2px 6px;
-  border-radius: 3px;
-  transition: color 0.15s;
-}
-.explain-close:hover { color: var(--text); }
-
-.explain-log-meta {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--panel);
-}
-.explain-meta-row {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  margin-bottom: 4px;
-  font-size: 11px;
-}
-.explain-meta-label {
-  color: var(--text-dim);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-  width: 60px;
-}
-.explain-meta-val {
+.modal-header-subtitle {
   font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-muted);
-  word-break: break-all;
-  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.explain-msg-box {
-  padding: 10px 16px;
+.modal-close {
+  background: none; border: 1px solid var(--border2);
+  color: var(--text-muted); cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 4px 10px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.modal-close:hover { color: var(--text); border-color: var(--lv-e); }
+
+.modal-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--panel);
 }
-.explain-msg-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.explain-msg-text {
+.modal-meta-badge {
+  padding: 3px 10px;
+  border-radius: 4px;
   font-family: var(--font-mono);
-  font-size: 11.5px;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-all;
-  line-height: 1.5;
-  max-height: 140px;
-  overflow-y: auto;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--card);
+  border: 1px solid var(--border2);
 }
 
-.explain-ai-section {
+.modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 14px 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
 }
-.explain-ai-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--cyan);
-  text-transform: uppercase;
-  margin-bottom: 10px;
+
+.modal-footer {
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--panel);
+}
+
+.modal-search-wrap {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.explain-ai-label::after {
-  content: '';
   flex: 1;
-  height: 1px;
-  background: var(--border);
+}
+.modal-search-wrap input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  width: 200px;
+  outline: none;
+}
+.modal-search-wrap input:focus { border-color: var(--cyan-dim); }
+.modal-search-count {
+  font-size: 10px;
+  color: var(--text-dim);
 }
 
-.explain-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
+/* Spinner (shared) */
 .spinner {
   width: 14px; height: 14px;
   border: 2px solid var(--border2);
@@ -1121,18 +1233,15 @@ mark {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.explain-ai-text {
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--text);
-}
-.explain-ai-text strong {
-  color: var(--gold);
-  font-weight: 600;
+.explain-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .explain-btn {
-  margin-top: 8px;
   padding: 6px 14px;
   border-radius: 5px;
   border: 1px solid var(--cyan-dim);
@@ -1144,17 +1253,36 @@ mark {
 }
 .explain-btn:hover { background: rgba(0,207,255,0.12); }
 
-/* Network request detail sections */
+.explain-ai-text {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+}
+.explain-ai-text strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* Sections inside modal */
 .ep-section {
   margin-bottom: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.ep-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
 }
 .ep-section-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--text-dim);
   text-transform: uppercase;
-  margin-bottom: 5px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1165,29 +1293,43 @@ mark {
   height: 1px;
   background: var(--border);
 }
+.ep-copy-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ep-copy-btn:hover { color: var(--cyan); border-color: var(--cyan-dim); }
+.ep-copy-btn.copied { color: var(--ch-ok); border-color: var(--ch-ok); }
 .ep-code {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   background: var(--card);
   border: 1px solid var(--border2);
   border-radius: 5px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   white-space: pre-wrap;
   word-break: break-all;
-  max-height: 200px;
+  flex: 1;
   overflow-y: auto;
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  position: relative;
 }
 .ep-url {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--cyan);
   background: var(--card);
   border: 1px solid var(--border2);
   border-radius: 5px;
-  padding: 7px 10px;
+  padding: 10px 12px;
   word-break: break-all;
   line-height: 1.5;
 }
@@ -1224,11 +1366,127 @@ mark {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.8;
-  max-height: 120px;
+  max-height: 200px;
   overflow-y: auto;
   margin-top: 5px;
 }
 .ep-hdr-name { color: var(--cyan-dim); }
+
+/* Expand/collapse for long arrays */
+.ep-expand-toggle {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: rgba(0,207,255,0.06);
+  border: 1px solid var(--cyan-dim);
+  border-radius: 4px;
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ep-expand-toggle:hover { background: rgba(0,207,255,0.12); }
+
+/* JWT decoded table */
+.jwt-table {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+.jwt-table th {
+  text-align: left;
+  color: var(--cyan-dim);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border2);
+}
+.jwt-table td {
+  padding: 4px 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  word-break: break-all;
+}
+.jwt-table tr:hover td { background: rgba(0,207,255,0.03); }
+
+/* Board grid table */
+.board-table {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-collapse: collapse;
+}
+.board-table th {
+  text-align: left;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border2);
+  position: sticky;
+  top: 0;
+  background: var(--card);
+}
+.board-table td {
+  padding: 4px 8px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.board-table tr:hover td { background: rgba(244,196,48,0.04); }
+
+/* URL breakdown table */
+.url-breakdown {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 8px 0;
+}
+.url-breakdown .url-label {
+  color: var(--cyan-dim);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.url-breakdown .url-value {
+  color: var(--text);
+  word-break: break-all;
+}
+
+/* Exclude filter */
+.ch-exclude-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+.ch-exclude-wrap label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+#ch-exclude {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--lv-e);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  width: 140px;
+  outline: none;
+  transition: all 0.15s;
+}
+#ch-exclude:focus { border-color: var(--lv-e); width: 200px; }
+#ch-exclude::placeholder { color: var(--text-dim); font-size: 10px; }
 
 /* JSON syntax highlight */
 .json-key  { color: var(--cyan); }
@@ -1262,6 +1520,10 @@ mark {
   border-radius: 5px;
   padding: 10px 12px;
   margin-bottom: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .ep-event-name {
   font-family: var(--font-mono);
@@ -1348,6 +1610,7 @@ mark {
   z-index: 100;
 }
 #toast.show { opacity: 1; }
+#toast.error { background: rgba(255,77,77,0.18); border: 1px solid var(--lv-e); color: var(--lv-e); }
 </style>
 </head>
 <body>
@@ -1386,8 +1649,9 @@ mark {
       <div class="view-toggle">
         <button class="view-btn active" data-view="both">◫ Both</button>
         <button class="view-btn" data-view="logcat">◧ Logcat</button>
-        <button class="view-btn" data-view="charles">◨ Charles</button>
+        <button class="view-btn" data-view="charles">◨ Network</button>
       </div>
+      <!-- analytics badge removed -->
 
       <div id="pid-badge" class="pid-badge hidden">
         PID&nbsp;<span id="pid-val">—</span>
@@ -1447,7 +1711,6 @@ mark {
 
       <div class="ctl-btns">
         <button class="toggle-btn active" id="autoscroll-btn">↓ Auto</button>
-        <button class="action-btn" id="clear-btn">Clear</button>
         <button class="action-btn" id="export-btn">Export</button>
       </div>
     </div>
@@ -1455,7 +1718,14 @@ mark {
 
   <!-- ── Log viewer + explanation panel ── -->
   <div id="main-area">
+    <div id="top-area">
     <div id="log-container">
+      <div class="logcat-header">
+        <span class="logcat-header-title">Logcat</span>
+        <span class="logcat-count" id="logcat-header-count"></span>
+        <button class="ch-pause-btn" id="logcat-pause-btn">⏸ Pause</button>
+        <button class="charles-clear-btn" id="logcat-clear-btn">Clear</button>
+      </div>
       <div class="log-cols-header">
         <span class="log-col-hdr sort-col active" id="log-time-hdr">Time <span class="sort-arrow">↓</span></span>
         <span class="log-col-hdr">Lvl</span>
@@ -1485,7 +1755,8 @@ mark {
         <span class="charles-status-dot" id="charles-dot"></span>
         <span class="charles-header-title">Network Traffic</span>
         <span class="charles-count" id="charles-count">0 requests</span>
-        <button class="charles-clear-btn" id="charles-clear-btn">Clear</button>
+        <button class="ch-pause-btn" id="charles-pause-btn">⏸ Pause</button>
+        <button class="charles-clear-btn prominent" id="charles-clear-btn">Clear</button>
       </div>
       <div class="charles-filter-bar">
         <button class="ch-preset-btn" data-filter="all">ALL</button>
@@ -1497,15 +1768,21 @@ mark {
           <input type="text" id="ch-search" placeholder="host or path…" autocomplete="off">
           <button id="ch-clear-search">✕</button>
         </div>
+        <div class="ch-exclude-wrap">
+          <label>Exclude:</label>
+          <input type="text" id="ch-exclude" placeholder="domain1, domain2…" autocomplete="off">
+        </div>
       </div>
       <div class="charles-setup">
         <label>PORT</label>
         <input type="number" id="proxy-port-input" value="8082" min="1024" max="65535">
         <button class="charles-connect-btn" id="proxy-start-btn">Start Proxy</button>
         <a href="/api/proxy/cert" class="proxy-cert-link" id="proxy-cert-link" download>↓ SSL Cert</a>
+        <button class="device-proxy-btn" id="device-proxy-set-btn" title="Set Wi-Fi proxy on connected Android device via ADB">Set Device Proxy</button>
+        <button class="device-proxy-btn clear" id="device-proxy-clear-btn" title="Clear Wi-Fi proxy on connected Android device">Clear Device Proxy</button>
         <div class="proxy-guide" id="proxy-guide">
-          <span>Set Android proxy →</span>
-          <span class="proxy-guide-addr" id="proxy-guide-addr" title="Click to copy">—</span>
+          <span id="proxy-guide-label">Device proxy →</span>
+          <span class="proxy-guide-addr" id="proxy-guide-addr" title="Click to copy">loading…</span>
         </div>
       </div>
       <div class="charles-cols">
@@ -1519,59 +1796,47 @@ mark {
         <div id="charles-empty">
           <p>Proxy Not Running</p>
           <span class="sub">
-            Click "Start Proxy", then set your Android<br>
-            device's Wi-Fi proxy to this machine's IP<br>
-            on the configured port. Install the SSL cert<br>
-            once to decrypt HTTPS traffic.
+            Set your Android device's Wi-Fi proxy to the<br>
+            address shown above, then click "Start Proxy".<br>
+            Install the SSL cert once to decrypt HTTPS traffic.
           </span>
         </div>
       </div>
     </div>
 
-    <!-- Claude explanation panel -->
-    <div id="explain-panel" class="hidden">
-      <div class="explain-header">
-        <span class="explain-header-title">⚡ Claude Analysis</span>
-        <button class="explain-close" id="explain-close-btn">✕</button>
-      </div>
-      <div class="explain-log-meta">
-        <div class="explain-meta-row">
-          <span class="explain-meta-label">Level</span>
-          <span class="explain-meta-val" id="ep-level">—</span>
-        </div>
-        <div class="explain-meta-row">
-          <span class="explain-meta-label">Tag</span>
-          <span class="explain-meta-val" id="ep-tag">—</span>
-        </div>
-        <div class="explain-meta-row">
-          <span class="explain-meta-label">Category</span>
-          <span class="explain-meta-val" id="ep-cat">—</span>
-        </div>
-        <div class="explain-meta-row">
-          <span class="explain-meta-label">Time</span>
-          <span class="explain-meta-val" id="ep-ts">—</span>
-        </div>
-      </div>
-      <div class="explain-msg-box">
-        <div class="explain-msg-label">Full Message</div>
-        <div class="explain-msg-text" id="ep-msg">—</div>
-      </div>
-      <div class="explain-ai-section">
-        <div class="explain-ai-label">Claude Interpretation</div>
-        <div id="ep-loading" class="explain-loading" style="display:none">
-          <div class="spinner"></div>
-          <span>Analyzing…</span>
-        </div>
-        <div id="ep-text" class="explain-ai-text"></div>
-        <button id="ep-rerun-btn" class="explain-btn" style="display:none">↺ Re-analyze</button>
-      </div>
-    </div>
+    <!-- (explain-panel removed — replaced by detail modal below) -->
   </div>
+  </div><!-- /#top-area -->
 
   <!-- ── Status bar ── -->
   <div class="status-bar">
     <span id="status-left">Ready</span>
     <span id="status-right">0 logs in memory</span>
+  </div>
+</div>
+
+<!-- ── Detail modal overlay ── -->
+<div id="modal-backdrop"></div>
+<div id="detail-modal">
+  <div class="modal-header">
+    <div class="modal-header-left">
+      <span class="modal-header-title" id="modal-title">Details</span>
+      <span class="modal-header-subtitle" id="modal-subtitle"></span>
+    </div>
+    <button class="modal-close" id="modal-close-btn">ESC</button>
+  </div>
+  <div class="modal-meta" id="modal-meta"></div>
+  <div class="modal-body" id="modal-body"></div>
+  <div class="modal-footer">
+    <div class="modal-search-wrap">
+      <input type="text" id="modal-search" placeholder="Search in body… (Ctrl+F)">
+      <span class="modal-search-count" id="modal-search-count"></span>
+    </div>
+    <div id="modal-loading" class="explain-loading" style="display:none">
+      <div class="spinner"></div>
+      <span>Analyzing…</span>
+    </div>
+    <button id="modal-claude-btn" class="explain-btn" style="display:none">⚡ Ask Claude</button>
   </div>
 </div>
 
@@ -1643,10 +1908,11 @@ function highlightSearch(str) {
   } catch { return str; }
 }
 
-function showToast(msg, duration = 2200) {
+function showToast(msg, isError = false, duration = 2200) {
   toast.textContent = msg;
+  toast.classList.toggle('error', isError);
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
+  setTimeout(() => { toast.classList.remove('show'); toast.classList.remove('error'); }, duration);
 }
 
 // ── Filter logic ─────────────────────────────────────────────────────────────
@@ -1667,6 +1933,217 @@ function passesFilter(log) {
   return true;
 }
 
+// ── Analytics log detection & parsing ────────────────────────────────────────
+
+// Patterns that prefix a JSON payload in a log message
+const ANALYTICS_LOG_PATTERNS = [
+  /^\[Mixpanel\]\s+Sending batch of data:\s*(\[.+)/s,
+  /^\[Mixpanel\]\s+Sending people data:\s*(\[.+)/s,
+  /^\[Mixpanel\]\s+.+?:\s*(\[.+)/s,
+  /^\[AnalyticsSDK\]\s+Event tracked:\s*\S+,\s*(\{.+)/s,
+  /^\[TAPP\].+?:\s*(\[.+)/s,
+  /^\[Analytics\].+?:\s*(\[.+)/s,
+];
+
+// Try to repair truncated JSON by closing open brackets/braces
+function repairTruncatedJSON(str) {
+  try { JSON.parse(str); return str; } catch {}
+  let s = str.trim();
+  // Track open brackets/braces
+  let opens = [];
+  let inStr = false, escape = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escape) { escape = false; continue; }
+    if (c === '\\') { escape = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') opens.push('}');
+    else if (c === '[') opens.push(']');
+    else if (c === '}' || c === ']') opens.pop();
+  }
+  // Close any dangling string
+  if (inStr) s += '"';
+  // Close open brackets/braces in reverse order
+  while (opens.length) s += opens.pop();
+  try { JSON.parse(s); return s; } catch { return null; }
+}
+
+// Recursively parse string values that contain JSON (e.g. game_board: "[\"0.e\",...]")
+function deepParseStringifiedJSON(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(deepParseStringifiedJSON);
+  if (typeof obj === 'string') {
+    const trimmed = obj.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try { return deepParseStringifiedJSON(JSON.parse(trimmed)); } catch {}
+    }
+    return obj;
+  }
+  if (typeof obj === 'object') {
+    const result = {};
+    for (const [k, v] of Object.entries(obj)) result[k] = deepParseStringifiedJSON(v);
+    return result;
+  }
+  return obj;
+}
+
+function parseAnalyticsLog(message) {
+  if (!message) return null;
+  for (const rx of ANALYTICS_LOG_PATTERNS) {
+    const m = message.match(rx);
+    if (m) {
+      const raw = m[1];
+      const prefix = message.slice(0, message.indexOf(m[1])).trim();
+      // Try direct parse, then try repairing truncated JSON
+      const jsonStr = repairTruncatedJSON(raw);
+      if (jsonStr) {
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const items  = Array.isArray(parsed) ? parsed : [parsed];
+          return { prefix, items, truncated: jsonStr !== raw };
+        } catch {}
+      }
+      // Regex matched but JSON repair failed — return raw fallback
+      return { prefix, items: null, rawJson: raw, truncated: true };
+    }
+  }
+  return null;
+}
+
+// Parse any logcat message that contains embedded JSON (not just analytics)
+function parseEmbeddedJSON(message) {
+  if (!message) return null;
+  const jsonMatch = message.match(/(\{[\s\S]{10,}\}|\[[\s\S]{10,}\])/);
+  if (!jsonMatch) return null;
+  const raw = jsonMatch[0];
+  const jsonStr = repairTruncatedJSON(raw);
+  if (!jsonStr) return null;
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const prefix = message.slice(0, message.indexOf(raw)).trim();
+    return { prefix, parsed, truncated: jsonStr !== raw };
+  } catch { return null; }
+}
+
+function analyticsLogSummary(parsed) {
+  const { prefix, items, truncated } = parsed;
+  const suffix = truncated ? ' [truncated]' : '';
+  // Raw fallback — no parsed items
+  if (!items) return `${prefix}${suffix}`;
+  const parts = items.map(item => {
+    if (item.EventName) return item.EventName;                   // AnalyticsSDK event
+    if (item.event)     return item.event;                       // Mixpanel track event
+    if (item['$set'])   return `People update (${Object.keys(item['$set']).slice(0,3).join(', ')}...)`;
+    if (item['$add'])   return `People $add`;
+    return '(unknown)';
+  });
+  const label = parts.length === 1 ? parts[0] : `${parts[0]} +${parts.length - 1} more`;
+  // Avoid redundancy: if prefix already contains the event name, don't repeat it
+  if (parts.length === 1 && prefix.includes(parts[0])) {
+    return `${prefix}${suffix}`;
+  }
+  return `${prefix}  ·  ${label}${suffix}`;
+}
+
+function renderAnalyticsLogDetail(parsed) {
+  const { prefix, items, truncated } = parsed;
+
+  // Raw fallback — regex matched but JSON repair failed
+  if (!items && parsed.rawJson) {
+    const logMessage = prefix.replace(/,\s*$/, '').trim();
+    const lib = logMessage.match(/^\[(\w+)\]/)?.[1] || 'Analytics';
+    const msg = logMessage.replace(/^\[\w+\]\s*/, '');
+    // Build a prettified raw display: indent the raw JSON for readability
+    let prettyRaw = parsed.rawJson;
+    try {
+      // Attempt basic indentation even on broken JSON
+      prettyRaw = prettyRaw
+        .replace(/,\s*"/g, ',\n  "')
+        .replace(/^\{/, '{\n  ')
+        .replace(/\}$/, '\n}')
+        .replace(/"Properties":\s*\{/g, '"Properties": {\n    ')
+        .replace(/"Properties":\s*\{([^}])/g, '"Properties": {\n    $1');
+    } catch {}
+    const header = `{\n  "Library": "${lib}",\n  "LogMessage": "${msg.replace(/"/g, '\\"')}",\n  "Data": `;
+    const footer = `\n}`;
+    let html = `<div class="ep-analytics-summary"><span>${escHtml(prefix)}</span><span style="color:var(--lv-w);font-size:10px;margin-left:8px">[truncated by logcat]</span></div>`;
+    html += `<div class="ep-event-card"><pre class="ep-code">${syntaxHighlightJSON(header + prettyRaw + footer)}</pre></div>`;
+    return html;
+  }
+
+  let html = `<div class="ep-analytics-summary"><span class="ep-analytics-count">📊 ${items.length} item${items.length > 1 ? 's' : ''}</span><span>${escHtml(prefix)}</span>${truncated ? '<span style="color:var(--lv-w);font-size:10px;margin-left:8px">[truncated by logcat]</span>' : ''}</div>`;
+
+  for (const item of items) {
+    const uid = item['$distinct_id'] || (item.properties && item.properties.distinct_id) || (item.Properties && item.Properties.distinct_id) || '—';
+    const ts  = item['$time'] ? new Date(item['$time']).toLocaleTimeString()
+              : item.ResTimestamp ? new Date(item.ResTimestamp).toLocaleTimeString()
+              : (item.properties && item.properties.time ? new Date(item.properties.time * 1000).toLocaleTimeString() : '—');
+
+    html += `<div class="ep-event-card">`;
+
+    if (item.EventName) {
+      // AnalyticsSDK event — beautified JSON with Library/LogMessage/Data structure
+      const logMessage = prefix.replace(/,\s*$/, '').trim();
+      // Deep-parse stringified JSON values (e.g. game_board: "[\"0.e\",...]")
+      const deepParsed = deepParseStringifiedJSON(item);
+      const wrapper = {
+        Library: 'AnalyticsSDK',
+        LogMessage: logMessage.replace(/^\[AnalyticsSDK\]\s*/, ''),
+        Data: deepParsed
+      };
+      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(wrapper, null, 2))}</pre>`;
+
+    } else if (item.event) {
+      // Mixpanel track event
+      const p = item.properties || {};
+      html += `<div class="ep-event-name">${escHtml(item.event)}</div>`;
+      html += `<div class="ep-event-meta">`;
+      html += `<span>👤 ${escHtml(uid)}</span><span>🕐 ${escHtml(ts)}</span>`;
+      if (p.chapter    != null) html += `<span>📍 Ch.${p.chapter}</span>`;
+      if (p['$app_version_string']) html += `<span>v${escHtml(p['$app_version_string'])}</span>`;
+      html += `</div>`;
+      const keyRows = ANALYTICS_KEY_PROPS.filter(k => p[k] != null && k !== '$app_version_string').map(k => [k, p[k]]);
+      if (keyRows.length) {
+        html += `<div class="ep-event-props">`;
+        for (const [k, v] of keyRows) {
+          const display = typeof v === 'boolean'
+            ? `<span style="color:${v ? 'var(--ch-ok)' : 'var(--lv-e)'}">${v}</span>`
+            : `<span class="ep-prop-val">${escHtml(String(v))}</span>`;
+          html += `<div class="ep-prop-row"><span class="ep-prop-key">${escHtml(k)}</span>${display}</div>`;
+        }
+        html += `</div>`;
+      }
+      // BQ button
+      const q = buildBQQuery(item, p);
+      html += `<button class="ep-bq-btn" onclick="copyBQQuery(${JSON.stringify(q)})">📋 Copy BQ Query</button>`;
+
+    } else if (item['$set']) {
+      // People API update
+      html += `<div class="ep-event-name" style="color:var(--cyan)">People Profile Update ($set)</div>`;
+      html += `<div class="ep-event-meta"><span>👤 ${escHtml(uid)}</span><span>🕐 ${escHtml(ts)}</span></div>`;
+      html += `<div class="ep-event-props">`;
+      for (const [k, v] of Object.entries(item['$set'])) {
+        html += `<div class="ep-prop-row"><span class="ep-prop-key">${escHtml(k)}</span><span class="ep-prop-val">${escHtml(String(v))}</span></div>`;
+      }
+      html += `</div>`;
+    } else {
+      // Unknown — show raw
+      html += `<div class="ep-event-name" style="color:var(--text-muted)">Unknown payload</div>`;
+      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(item, null, 2).slice(0, 2000))}</pre>`;
+    }
+
+    // Raw payload collapsible (skip for AnalyticsSDK — already shown as beautified JSON)
+    if (!item.EventName) {
+      html += `<div class="ep-section-label" style="margin-top:8px;font-size:10px">Raw payload <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
+      html += `<div style="display:none"><pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(item, null, 2))}</pre></div>`;
+    }
+
+    html += `</div>`;
+  }
+  return html;
+}
+
 // ── Row creation ─────────────────────────────────────────────────────────────
 
 function makeRow(log) {
@@ -1676,7 +2153,10 @@ function makeRow(log) {
   const catColor = CAT_COLORS[log.category] || CAT_COLORS.system;
   const tag = escHtml(log.tag || '');
   const ts  = escHtml(log.timestamp || '');
-  const msg = highlightSearch(escHtml(log.message || ''));
+  // For analytics logs with JSON payloads, show a readable summary instead of raw JSON
+  const analyticsParsed = parseAnalyticsLog(log.message || '');
+  const rawMsg = analyticsParsed ? analyticsLogSummary(analyticsParsed) : (log.message || '');
+  const msg = highlightSearch(escHtml(rawMsg));
 
   div.innerHTML =
     `<span class="log-ts">${ts}</span>` +
@@ -1684,11 +2164,8 @@ function makeRow(log) {
     `<span class="log-tag" style="color:${catColor}" title="${tag}">${tag}</span>` +
     `<span class="log-msg">${msg}</span>`;
 
-  // Click: open panel. Auto-explain on E/W rows.
-  div.addEventListener('click', () => {
-    const autoExplain = (log.level === 'E' || log.level === 'W');
-    openExplainPanel(log, div, autoExplain);
-  });
+  div.addEventListener('click', () => highlightRow(div, log, 'logcat'));
+  div.addEventListener('dblclick', () => openDetailModal(log, 'logcat'));
 
   return div;
 }
@@ -1731,6 +2208,39 @@ function rerender() {
   }
 }
 
+// ── Pause state ───────────────────────────────────────────────────────────────
+let logcatPaused       = false;
+let logcatPendingCount = 0;
+let charlesPaused       = false;
+let charlesPendingCount = 0;
+
+function updateLogcatPauseBtn() {
+  const btn   = document.getElementById('logcat-pause-btn');
+  const count = document.getElementById('logcat-header-count');
+  if (!btn) return;
+  if (logcatPaused) {
+    btn.textContent = `▶ Resume${logcatPendingCount > 0 ? ' (+' + logcatPendingCount + ')' : ''}`;
+    btn.classList.add('paused');
+    if (count) count.textContent = logcatPendingCount > 0 ? `${logcatPendingCount} buffered` : '';
+  } else {
+    btn.textContent = '⏸ Pause';
+    btn.classList.remove('paused');
+    if (count) count.textContent = '';
+  }
+}
+
+function updateCharlesPauseBtn() {
+  const btn = document.getElementById('charles-pause-btn');
+  if (!btn) return;
+  if (charlesPaused) {
+    btn.textContent = `▶ Resume${charlesPendingCount > 0 ? ' (+' + charlesPendingCount + ')' : ''}`;
+    btn.classList.add('paused');
+  } else {
+    btn.textContent = '⏸ Pause';
+    btn.classList.remove('paused');
+  }
+}
+
 // ── Add incoming log ─────────────────────────────────────────────────────────
 
 function addLog(log) {
@@ -1741,6 +2251,12 @@ function addLog(log) {
   if (log.level === 'E') stats.errors++;
   if (log.level === 'W') stats.warns++;
   updateStatDisplay();
+
+  if (logcatPaused) {
+    logcatPendingCount++;
+    updateLogcatPauseBtn();
+    return;
+  }
 
   if (passesFilter(log)) {
     appendRow(log);
@@ -1778,20 +2294,23 @@ function fmt(n) {
   return String(n);
 }
 
-// ── Explanation panel ─────────────────────────────────────────────────────────
+// ── Detail modal ─────────────────────────────────────────────────────────────
 
-const explainPanel  = document.getElementById('explain-panel');
-const epLevel       = document.getElementById('ep-level');
-const epTag         = document.getElementById('ep-tag');
-const epCat         = document.getElementById('ep-cat');
-const epTs          = document.getElementById('ep-ts');
-const epMsg         = document.getElementById('ep-msg');
-const epLoading     = document.getElementById('ep-loading');
-const epText        = document.getElementById('ep-text');
-const epRerunBtn    = document.getElementById('ep-rerun-btn');
+const modalBackdrop = document.getElementById('modal-backdrop');
+const detailModal   = document.getElementById('detail-modal');
+const modalTitle    = document.getElementById('modal-title');
+const modalSubtitle = document.getElementById('modal-subtitle');
+const modalMeta     = document.getElementById('modal-meta');
+const modalBody     = document.getElementById('modal-body');
+const modalClaudeBtn= document.getElementById('modal-claude-btn');
+const modalLoading  = document.getElementById('modal-loading');
+const modalSearch   = document.getElementById('modal-search');
+const modalSearchCt = document.getElementById('modal-search-count');
 
 let selectedRow = null;
 let selectedLog = null;
+let selectedNetworkEntry = null;
+let modalMode = null; // 'logcat' or 'network'
 
 const LEVEL_NAMES = {E:'Error', W:'Warning', I:'Info', D:'Debug', V:'Verbose'};
 const CAT_COLORS_MAP = {
@@ -1799,72 +2318,485 @@ const CAT_COLORS_MAP = {
   analytics:'#FB923C', sentry:'#F87171', facebook:'#60A5FA', system:'#475569'
 };
 
-function openExplainPanel(log, rowEl, autoExplain) {
+// ── Row highlighting (single click) ──────────────────────────────────────────
+function highlightRow(rowEl, data, mode) {
   if (selectedRow) selectedRow.classList.remove('selected');
   if (selectedCharlesRow) { selectedCharlesRow.classList.remove('selected'); selectedCharlesRow = null; }
   selectedRow = rowEl;
   rowEl.classList.add('selected');
+  if (mode === 'logcat') {
+    selectedLog = data;
+    selectedNetworkEntry = null;
+  } else {
+    selectedCharlesRow = rowEl;
+    selectedNetworkEntry = data;
+    selectedLog = null;
+  }
+}
+
+// ── Smart body decoding ──────────────────────────────────────────────────────
+
+function decodeJWT(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const header  = JSON.parse(atob(parts[0].replace(/-/g,'+').replace(/_/g,'/')));
+    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return { header, payload };
+  } catch { return null; }
+}
+
+function renderJWTTable(payload) {
+  let rows = '';
+  const timeFields = ['iat','exp','nbf'];
+  for (const [k, v] of Object.entries(payload)) {
+    let display = v;
+    if (timeFields.includes(k) && typeof v === 'number') {
+      display = `${new Date(v * 1000).toLocaleString()} (${v})`;
+    }
+    rows += `<tr><td style="color:var(--cyan-dim)">${escHtml(k)}</td><td>${escHtml(String(display))}</td></tr>`;
+  }
+  return `<table class="jwt-table"><thead><tr><th>Claim</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// Recursively unescape nested JSON strings and decode JWTs
+function smartDecodeValue(val, depth) {
+  if (depth > 5) return val;
+  if (typeof val === 'string') {
+    // Try JWT decode
+    if (val.startsWith('eyJ') && val.split('.').length === 3) {
+      const jwt = decodeJWT(val);
+      if (jwt) return { __jwt: true, token: val.slice(0, 30) + '...', decoded: jwt.payload };
+    }
+    // Try nested JSON unescape
+    if ((val.startsWith('{') || val.startsWith('[')) && val.length > 10) {
+      try {
+        const parsed = JSON.parse(val);
+        return smartDecodeObj(parsed, depth + 1);
+      } catch {}
+    }
+  }
+  if (Array.isArray(val)) return val.map(v => smartDecodeValue(v, depth));
+  if (val && typeof val === 'object') return smartDecodeObj(val, depth);
+  return val;
+}
+
+function smartDecodeObj(obj, depth) {
+  if (depth > 5) return obj;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = smartDecodeValue(v, (depth || 0) + 1);
+  }
+  return out;
+}
+
+// Render a decoded body with JWT tables inline
+function renderSmartJSON(obj, indent) {
+  indent = indent || 0;
+  const pad = '  '.repeat(indent);
+  if (obj && obj.__jwt) {
+    return `${pad}<span class="json-str">"${escHtml(obj.token)}"</span>\n` +
+           `${pad}<div style="margin:4px 0 8px ${indent*16}px;border-left:2px solid var(--cyan-dim);padding-left:10px">` +
+           `<span style="font-size:9px;color:var(--cyan);text-transform:uppercase;font-weight:700;letter-spacing:0.08em">Decoded JWT</span>` +
+           renderJWTTable(obj.decoded) + `</div>`;
+  }
+  // Fall back to standard JSON stringify + syntax highlight
+  const str = JSON.stringify(obj, null, 2);
+  return syntaxHighlightJSON(str);
+}
+
+// Known game board item field names (BoardRepositoryData, etc.)
+const BOARD_ITEM_FIELDS = [
+  'id','name','category','asset_key','_skip','_skip',
+  'tags_a','tags_b','value','status','instance_id','level',
+  'display_name','_skip','counter_a','counter_b','counter_c'
+];
+
+function isBoardData(key, val) {
+  return (key === 'BoardRepositoryData' || key === 'BoardAuxRepositoryData') &&
+         Array.isArray(val) && val.length >= 2 && Array.isArray(val[1]);
+}
+
+function renderBoardTable(boardArr) {
+  // boardArr: [timestamp, [ [boardIndex, [coords, itemArray, ...]], ... ]]
+  const items = [];
+  const boards = boardArr[1];
+  if (!Array.isArray(boards)) return null;
+  for (const board of boards) {
+    if (!Array.isArray(board) || board.length < 2) continue;
+    const boardIdx = board[0];
+    const cells = board[1];
+    if (!Array.isArray(cells)) continue;
+    for (const cell of cells) {
+      if (!Array.isArray(cell) || cell.length < 2) continue;
+      const coords = cell[0]; // [col, row]
+      const data   = cell[1]; // positional array
+      if (!Array.isArray(data)) continue;
+      const item = { board: boardIdx, col: coords[0], row: coords[1] };
+      for (let i = 0; i < data.length && i < BOARD_ITEM_FIELDS.length; i++) {
+        const fname = BOARD_ITEM_FIELDS[i];
+        if (fname !== '_skip') item[fname] = data[i];
+      }
+      items.push(item);
+    }
+  }
+  if (!items.length) return null;
+
+  const cols = ['board','col','row','id','name','category','level','value','display_name'];
+  let html = '<table class="board-table"><thead><tr>';
+  for (const c of cols) html += `<th>${escHtml(c)}</th>`;
+  html += '</tr></thead><tbody>';
+
+  const renderItems = items.slice(0, 10);
+  const hasMore = items.length > 10;
+  const allId = 'board_' + Math.random().toString(36).slice(2);
+
+  for (const it of renderItems) {
+    html += '<tr>';
+    for (const c of cols) html += `<td>${escHtml(String(it[c] ?? ''))}</td>`;
+    html += '</tr>';
+  }
+
+  if (hasMore) {
+    html += `</tbody></table>`;
+    html += `<div id="${allId}" style="display:none"><table class="board-table"><tbody>`;
+    for (const it of items.slice(10)) {
+      html += '<tr>';
+      for (const c of cols) html += `<td>${escHtml(String(it[c] ?? ''))}</td>`;
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    html += `<button class="ep-expand-toggle" onclick="
+      const el=document.getElementById('${allId}');
+      const vis=el.style.display!=='none';
+      el.style.display=vis?'none':'block';
+      this.textContent=vis?'Show all ${items.length} items':'Collapse';
+    ">Show all ${items.length} items</button>`;
+  } else {
+    html += '</tbody></table>';
+  }
+  return html;
+}
+
+// Parse game API URL with colon-separated IDs
+function renderURLBreakdown(url) {
+  try {
+    const u = new URL(url);
+    let html = '<div class="url-breakdown">';
+    html += `<span class="url-label">Host</span><span class="url-value">${escHtml(u.host)}</span>`;
+
+    // Check for colon-separated path params (e.g. /user/auth/id1:id2:id3)
+    const pathParts = u.pathname.split('/').filter(Boolean);
+    const lastPart = pathParts[pathParts.length - 1] || '';
+    const colonParts = lastPart.split(':');
+
+    if (colonParts.length >= 2 && colonParts.every(p => p.length >= 8)) {
+      const basePath = '/' + pathParts.slice(0, -1).join('/');
+      html += `<span class="url-label">Endpoint</span><span class="url-value">${escHtml(basePath)}</span>`;
+      const labels = ['User ID', 'Distinct ID', 'Device ID', 'Param 4', 'Param 5'];
+      colonParts.forEach((p, i) => {
+        html += `<span class="url-label">${labels[i] || 'Param ' + (i+1)}</span><span class="url-value">${escHtml(p)}</span>`;
+      });
+    } else {
+      html += `<span class="url-label">Path</span><span class="url-value">${escHtml(u.pathname)}</span>`;
+    }
+
+    if (u.search) html += `<span class="url-label">Query</span><span class="url-value">${escHtml(u.search)}</span>`;
+    html += '</div>';
+    return html;
+  } catch { return null; }
+}
+
+// Copy helper
+function copyToClipboard(text, btnEl) {
+  navigator.clipboard.writeText(text).then(() => {
+    if (btnEl) {
+      btnEl.textContent = 'Copied';
+      btnEl.classList.add('copied');
+      setTimeout(() => { btnEl.textContent = 'Copy'; btnEl.classList.remove('copied'); }, 1500);
+    }
+  });
+}
+
+function makeCopyableSection(label, content, rawText) {
+  const id = 'sec_' + Math.random().toString(36).slice(2);
+  return `<div class="ep-section">
+    <div class="ep-section-header">
+      <div class="ep-section-label">${escHtml(label)}</div>
+      <button class="ep-copy-btn" onclick="copyToClipboard(${JSON.stringify(rawText || '')}, this)">Copy</button>
+    </div>
+    ${content}
+  </div>`;
+}
+
+// ── Open detail modal ────────────────────────────────────────────────────────
+
+function openDetailModal(data, mode) {
+  modalMode = mode;
+  modalBody.innerHTML = '';
+  modalMeta.innerHTML = '';
+  modalClaudeBtn.style.display = 'none';
+  modalLoading.style.display = 'none';
+  modalSearch.value = '';
+  modalSearchCt.textContent = '';
+
+  if (mode === 'logcat') {
+    openLogcatModal(data);
+  } else {
+    openNetworkModal(data);
+  }
+
+  modalBackdrop.classList.add('visible');
+  detailModal.classList.add('visible');
+}
+
+function openLogcatModal(log) {
   selectedLog = log;
   selectedNetworkEntry = null;
 
   const lv  = log.level || '';
   const cat = log.category || 'system';
-  epLevel.textContent = `${lv} — ${LEVEL_NAMES[lv] || lv}`;
-  epLevel.style.color = lv === 'E' ? '#FF4D4D' : lv === 'W' ? '#F4C430' : '#D8EAF7';
-  epTag.textContent = log.tag || '';
-  epTag.style.color = CAT_COLORS_MAP[cat] || '#475569';
-  epCat.textContent = cat.toUpperCase();
-  epTs.textContent  = log.timestamp || '';
-  epMsg.textContent = log.message || '';
+  const lvColor = lv === 'E' ? 'var(--lv-e)' : lv === 'W' ? 'var(--lv-w)' : 'var(--text)';
 
-  epText.innerHTML = '';
-  epText.style.display = 'none';
-  epRerunBtn.style.display = 'none';
-  epRerunBtn.textContent = '↺ Re-analyze';
-  epRerunBtn.onclick = runExplain;
+  modalTitle.textContent = 'Logcat Entry';
+  modalSubtitle.textContent = `${log.tag || ''} — ${log.timestamp || ''}`;
 
-  explainPanel.classList.remove('hidden');
-  if (autoExplain) runExplain();
-}
+  modalMeta.innerHTML = `
+    <span class="modal-meta-badge" style="color:${lvColor}">${lv} ${LEVEL_NAMES[lv] || ''}</span>
+    <span class="modal-meta-badge" style="color:${CAT_COLORS_MAP[cat] || '#475569'}">${escHtml((cat || '').toUpperCase())}</span>
+    <span class="modal-meta-badge">${escHtml(log.tag || '')}</span>
+    <span class="modal-meta-badge">${escHtml(log.timestamp || '')}</span>
+  `;
 
-function runExplain() {
-  if (!selectedLog) return;
-  epLoading.style.display = 'flex';
-  epText.style.display = 'none';
-  epRerunBtn.style.display = 'none';
-  socket.emit('explain_log', selectedLog);
-}
+  // Format message — try analytics card view first, then JSON, then plain
+  const rawMsg = log.message || '';
+  let msgHtml;
 
-socket.on('log_explanation', ({ explanation }) => {
-  epLoading.style.display = 'none';
-  epRerunBtn.style.display = 'inline-block';
-
-  if (selectedNetworkEntry) {
-    // Network mode: append Claude section below request/response data
-    const prev = epText.querySelector('.ep-claude-section');
-    if (prev) prev.remove();
-    const section = document.createElement('div');
-    section.className = 'ep-claude-section ep-section';
-    section.innerHTML =
-      `<div class="ep-section-label" style="color:var(--cyan)">Claude Analysis</div>` +
-      `<div class="explain-ai-text">${escHtml(explanation).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')}</div>`;
-    epText.appendChild(section);
-    epText.style.display = 'block';
+  // 1) Analytics event logs (Mixpanel batches, AnalyticsSDK events)
+  const analyticsParsed = parseAnalyticsLog(rawMsg);
+  if (analyticsParsed) {
+    msgHtml = renderAnalyticsLogDetail(analyticsParsed);
   } else {
-    // Logcat mode: replace content with Claude explanation
-    epText.style.display = 'block';
-    epText.innerHTML = escHtml(explanation)
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // 2) Pure JSON message
+    try {
+      const parsed = JSON.parse(rawMsg);
+      const decoded = smartDecodeObj(parsed, 0);
+      msgHtml = `<pre class="ep-code">${renderSmartJSON(decoded)}</pre>`;
+    } catch {
+      // 3) Embedded JSON in a log line (with prefix text)
+      const embedded = parseEmbeddedJSON(rawMsg);
+      if (embedded) {
+        const decoded = smartDecodeObj(embedded.parsed, 0);
+        const before = escHtml(embedded.prefix);
+        const truncNote = embedded.truncated ? '<span style="color:var(--lv-w);font-size:10px;margin-left:6px">[truncated by logcat]</span>' : '';
+        msgHtml = (before ? `<div style="margin-bottom:6px;opacity:.8">${before}${truncNote}</div>` : (truncNote ? `<div style="margin-bottom:6px">${truncNote}</div>` : ''))
+                + `<pre class="ep-code">${renderSmartJSON(decoded)}</pre>`;
+      } else {
+        msgHtml = `<pre class="ep-code">${escHtml(rawMsg)}</pre>`;
+      }
+    }
+  }
+
+  modalBody.innerHTML = makeCopyableSection('Full Message', msgHtml, rawMsg);
+
+  // Claude button
+  modalClaudeBtn.style.display = 'inline-block';
+  modalClaudeBtn.onclick = () => {
+    modalLoading.style.display = 'flex';
+    modalClaudeBtn.style.display = 'none';
+    socket.emit('explain_log', log);
+  };
+}
+
+function smartDecodeBody(raw) {
+  if (!raw || !raw.trim()) return { html: '', text: raw || '' };
+  try {
+    const parsed = JSON.parse(raw);
+    const decoded = smartDecodeObj(parsed, 0);
+
+    // Check for board data keys
+    let boardHtml = '';
+    if (typeof decoded === 'object' && !Array.isArray(decoded)) {
+      for (const [k, v] of Object.entries(decoded)) {
+        if (isBoardData(k, v)) {
+          const table = renderBoardTable(v);
+          if (table) {
+            boardHtml += `<div class="ep-section">
+              <div class="ep-section-label">${escHtml(k)} (Board Grid)</div>
+              ${table}
+            </div>`;
+          }
+        }
+      }
+    }
+
+    const jsonStr = JSON.stringify(decoded, null, 2);
+    const codeHtml = `<pre class="ep-code">${renderSmartJSON(decoded)}</pre>`;
+    return { html: boardHtml + codeHtml, text: jsonStr };
+  } catch {
+    return { html: `<pre class="ep-code">${escHtml(raw)}</pre>`, text: raw };
+  }
+}
+
+function openNetworkModal(entry) {
+  selectedNetworkEntry = entry;
+  selectedLog = null;
+
+  const statusColor = {
+    ok: 'var(--ch-ok)', redirect: 'var(--ch-redirect)',
+    client_error: 'var(--ch-warn)', server_error: 'var(--ch-error)',
+  }[entry.status_cat] || 'var(--text)';
+
+  modalTitle.textContent = 'Network Request';
+  modalSubtitle.textContent = `${entry.method} ${entry.host}${entry.path || ''}`;
+
+  modalMeta.innerHTML = `
+    <span class="modal-meta-badge" style="color:${statusColor}">${entry.method} ${entry.status || '...'}</span>
+    <span class="modal-meta-badge">${escHtml(entry.host || '')}</span>
+    <span class="modal-meta-badge">${entry.duration > 0 ? entry.duration + 'ms' : '--'}</span>
+    <span class="modal-meta-badge">${fmtSize(entry.size)}</span>
+    <span class="modal-meta-badge">${escHtml(entry.ts || '')}</span>
+  `;
+
+  let html = '';
+
+  // URL breakdown
+  const urlBreakdown = renderURLBreakdown(entry.url);
+  if (urlBreakdown) {
+    html += makeCopyableSection('URL', urlBreakdown, entry.url);
+  } else {
+    html += makeCopyableSection('URL', `<div class="ep-url">${escHtml(entry.url)}</div>`, entry.url);
+  }
+
+  // Mixpanel special view
+  if (isMixpanelRequest(entry)) {
+    const events = parseMixpanelEvents(entry.req_body);
+    if (events && events.length) {
+      html += `<div class="ep-section"><div class="ep-section-label">Analytics Events (${events.length})</div>`;
+      html += renderAnalyticsEvents(events, entry);
+      html += `</div>`;
+    }
+  }
+
+  // Request headers (collapsed)
+  const reqHeadersId = 'rh_' + Math.random().toString(36).slice(2);
+  html += `<div class="ep-section">
+    <div class="ep-section-label">Request Headers
+      <button class="ep-headers-toggle" onclick="
+        const el=document.getElementById('${reqHeadersId}');
+        const open=el.style.display!=='none';
+        el.style.display=open?'none':'block';
+        this.textContent=open?'show':'hide';
+      ">show</button>
+    </div>
+    <div id="${reqHeadersId}" style="display:none">${renderHeaders(entry.req_headers)}</div>
+  </div>`;
+
+  // Request body
+  if (entry.req_body && entry.req_body.trim()) {
+    const req = smartDecodeBody(entry.req_body);
+    html += makeCopyableSection('Request Body', req.html, req.text);
+  }
+
+  // Response headers (collapsed)
+  const respHeadersId = 'rsph_' + Math.random().toString(36).slice(2);
+  html += `<div class="ep-section">
+    <div class="ep-section-label">Response Headers
+      <button class="ep-headers-toggle" onclick="
+        const el=document.getElementById('${respHeadersId}');
+        const open=el.style.display!=='none';
+        el.style.display=open?'none':'block';
+        this.textContent=open?'show':'hide';
+      ">show</button>
+    </div>
+    <div id="${respHeadersId}" style="display:none">${renderHeaders(entry.resp_headers)}</div>
+  </div>`;
+
+  // Response body
+  if (entry.resp_body && entry.resp_body.trim()) {
+    const resp = smartDecodeBody(entry.resp_body);
+    html += makeCopyableSection('Response Body', resp.html, resp.text);
+  }
+
+  modalBody.innerHTML = html;
+
+  // Claude button
+  modalClaudeBtn.style.display = 'inline-block';
+  modalClaudeBtn.onclick = () => {
+    modalLoading.style.display = 'flex';
+    modalClaudeBtn.style.display = 'none';
+    socket.emit('explain_request', entry);
+  };
+}
+
+// ── Close modal ──────────────────────────────────────────────────────────────
+
+function closeDetailModal() {
+  modalBackdrop.classList.remove('visible');
+  detailModal.classList.remove('visible');
+}
+
+document.getElementById('modal-close-btn').addEventListener('click', closeDetailModal);
+modalBackdrop.addEventListener('click', closeDetailModal);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && detailModal.classList.contains('visible')) {
+    closeDetailModal();
+    e.preventDefault();
   }
 });
 
-document.getElementById('explain-close-btn').addEventListener('click', () => {
-  explainPanel.classList.add('hidden');
-  if (selectedRow) { selectedRow.classList.remove('selected'); selectedRow = null; }
-  selectedLog = null;
+// ── Claude response handler ──────────────────────────────────────────────────
+
+socket.on('log_explanation', ({ explanation }) => {
+  modalLoading.style.display = 'none';
+  modalClaudeBtn.style.display = 'inline-block';
+
+  const formatted = escHtml(explanation).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const section = document.createElement('div');
+  section.className = 'ep-section';
+  section.innerHTML = `
+    <div class="ep-section-label" style="color:var(--cyan)">Claude Analysis</div>
+    <div class="explain-ai-text">${formatted}</div>
+  `;
+  modalBody.appendChild(section);
+  section.scrollIntoView({ behavior: 'smooth' });
 });
 
-// epRerunBtn.onclick is set dynamically per context (logcat vs network)
+// ── Modal search (Ctrl+F within body) ────────────────────────────────────────
+
+modalSearch.addEventListener('input', () => {
+  const q = modalSearch.value.trim().toLowerCase();
+  // Remove existing highlights
+  modalBody.querySelectorAll('mark.modal-highlight').forEach(m => {
+    m.replaceWith(m.textContent);
+  });
+  if (!q) { modalSearchCt.textContent = ''; return; }
+
+  // Walk text nodes inside .ep-code elements
+  let count = 0;
+  modalBody.querySelectorAll('.ep-code, .url-breakdown, .jwt-table, .board-table').forEach(el => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      const text = node.textContent;
+      const idx = text.toLowerCase().indexOf(q);
+      if (idx === -1) continue;
+      const before = document.createTextNode(text.slice(0, idx));
+      const mark = document.createElement('mark');
+      mark.className = 'modal-highlight';
+      mark.style.cssText = 'background:rgba(244,196,48,0.4);color:var(--text);border-radius:2px;padding:0 1px';
+      mark.textContent = text.slice(idx, idx + q.length);
+      const after = document.createTextNode(text.slice(idx + q.length));
+      node.parentNode.insertBefore(before, node);
+      node.parentNode.insertBefore(mark, node);
+      node.parentNode.insertBefore(after, node);
+      node.remove();
+      count++;
+    }
+  });
+  modalSearchCt.textContent = count ? `${count} found` : 'no matches';
+});
 
 // ── Refresh button ───────────────────────────────────────────────────────────
 
@@ -2066,11 +2998,7 @@ logContainer.addEventListener('scroll', () => {
   }
 });
 
-// ── Clear ────────────────────────────────────────────────────────────────────
-
-document.getElementById('clear-btn').addEventListener('click', () => {
-  socket.emit('clear_logs');
-});
+// ── Clear (top-bar clear removed — logcat/charles panel headers have their own) ──
 
 // ── Export ───────────────────────────────────────────────────────────────────
 
@@ -2098,47 +3026,47 @@ document.getElementById('export-btn').addEventListener('click', () => {
 
 // ── View toggle ──────────────────────────────────────────────────────────────
 
-const mainArea      = document.getElementById('main-area');
-const viewDivider   = document.getElementById('view-divider');
-const charlesPanel  = document.getElementById('charles-panel');
+const mainArea        = document.getElementById('main-area');
+const topArea         = document.getElementById('top-area');
+const viewDivider     = document.getElementById('view-divider');
+const charlesPanel    = document.getElementById('charles-panel');
 let currentView = 'both';
-let savedRatio = parseFloat(localStorage.getItem('mc_split_ratio') || '0.5');
+let savedRatio        = parseFloat(localStorage.getItem('mc_split_ratio') || '0.5');
 
 function applyView(view) {
   currentView = view;
   document.querySelectorAll('.view-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.view === view));
 
-  if (view === 'both') {
-    logContainer.style.flex  = `0 0 ${savedRatio * 100}%`;
-    charlesPanel.classList.remove('hidden');
-    viewDivider.style.display = 'block';
-    charlesPanel.style.flex   = '1';
-  } else if (view === 'logcat') {
-    logContainer.style.flex  = '1';
-    charlesPanel.classList.add('hidden');
-    viewDivider.style.display = 'none';
-  } else {
-    logContainer.style.flex  = '0 0 0%';
-    charlesPanel.classList.remove('hidden');
-    charlesPanel.style.flex   = '1';
-    viewDivider.style.display = 'none';
-    logContainer.style.display = 'none';
-  }
+  viewDivider.style.display = 'none';
 
-  if (view !== 'charles') logContainer.style.display = '';
+  if (view === 'both') {
+    logContainer.style.display = '';
+    logContainer.style.flex    = `0 0 ${savedRatio * 100}%`;
+    charlesPanel.classList.remove('hidden');
+    charlesPanel.style.flex    = '1';
+    viewDivider.style.display  = 'block';
+  } else if (view === 'logcat') {
+    logContainer.style.display = '';
+    logContainer.style.flex    = '1';
+    charlesPanel.classList.add('hidden');
+  } else if (view === 'charles') {
+    logContainer.style.display = 'none';
+    charlesPanel.classList.remove('hidden');
+    charlesPanel.style.flex    = '1';
+  }
 }
 
 document.querySelectorAll('.view-btn').forEach(btn => {
   btn.addEventListener('click', () => applyView(btn.dataset.view));
 });
 
-// ── Draggable divider ─────────────────────────────────────────────────────────
+// ── Draggable divider (logcat / charles horizontal split) ────────────────────
 
-let isDragging = false;
+let isDraggingH = false;
 
 viewDivider.addEventListener('mousedown', (e) => {
-  isDragging = true;
+  isDraggingH = true;
   viewDivider.classList.add('dragging');
   document.body.style.cursor = 'col-resize';
   document.body.style.userSelect = 'none';
@@ -2146,20 +3074,22 @@ viewDivider.addEventListener('mousedown', (e) => {
 });
 
 document.addEventListener('mousemove', (e) => {
-  if (!isDragging) return;
-  const rect = mainArea.getBoundingClientRect();
-  let ratio = (e.clientX - rect.left) / rect.width;
-  ratio = Math.max(0.2, Math.min(0.8, ratio));
-  savedRatio = ratio;
-  localStorage.setItem('mc_split_ratio', ratio);
-  logContainer.style.flex  = `0 0 ${ratio * 100}%`;
-  charlesPanel.style.flex  = '1';
+  if (isDraggingH) {
+    const rect = topArea.getBoundingClientRect();
+    let ratio = (e.clientX - rect.left) / rect.width;
+    ratio = Math.max(0.2, Math.min(0.8, ratio));
+    savedRatio = ratio;
+    localStorage.setItem('mc_split_ratio', ratio);
+    logContainer.style.flex  = `0 0 ${ratio * 100}%`;
+    charlesPanel.style.flex  = '1';
+  }
 });
 
 document.addEventListener('mouseup', () => {
-  if (!isDragging) return;
-  isDragging = false;
-  viewDivider.classList.remove('dragging');
+  if (isDraggingH) {
+    isDraggingH = false;
+    viewDivider.classList.remove('dragging');
+  }
   document.body.style.cursor = '';
   document.body.style.userSelect = '';
 });
@@ -2176,6 +3106,7 @@ let charlesTotal       = 0;
 let selectedCharlesRow = null;
 let charlesFilterMode  = 'game';  // default: game traffic only
 let charlesSearchText  = '';
+let charlesExcludeText = localStorage.getItem('mc_charles_exclude') || '';
 
 // ── Shared sort state (synced between logcat + network panels) ────────────────
 let globalSortDesc = true;   // true = newest at top
@@ -2198,8 +3129,18 @@ const CH_PRESETS = {
   // ALL: no filter
   all: () => true,
 
-  // GAME API: Merge Cruise backend servers only (engine + game-api on mergecruiseserver.com)
-  game: e => /mergecruiseserver\.com/i.test(e.host),
+  // GAME API: all traffic directly caused by the Merge Cruise game client
+  //   mergecruiseserver.com                    — core game server (auth, state, checkpoint, heartbeat)
+  //   mixpanel.com                             — game analytics pipeline
+  //   singular.net                             — Singular S2S attribution / install analytics
+  //   stash.gg                                 — Stash Pay DTC webshop (in-app purchases)
+  //   sentry.io                                — crash & error monitoring (peerplay-ltd.sentry.io)
+  //   smartlook.com                            — player session recording SDK
+  //   firebaseremoteconfig*.googleapis.com     — Remote Config (live ops, segmentation, feature flags)
+  //   firebaseinstallations.googleapis.com     — Firebase Installations API
+  //   fcm.googleapis.com                       — Firebase Cloud Messaging (push notifications)
+  //   app-measurement.com                      — Firebase Analytics measurement
+  game: e => /mergecruiseserver\.com|mixpanel\.com|singular\.net|stash\.gg|sentry\.io|smartlook\.com|firebaseremoteconfig\.googleapis\.com|firebaseremoteconfigrealtime\.googleapis\.com|firebaseinstallations\.googleapis\.com|fcm\.googleapis\.com|app-measurement\.com/i.test(e.host),
 
   // ADS SDKs: ad mediation & monetization networks
   ads: e => /applovin\.com|applovinmax\.com|ironsrc\.com|is\.com|unityads\.unity3d|unity3d\.com\/ads|vungle|chartboost|adcolony|googleads\.g\.doubleclick|doubleclick\.net|googlesyndication|fbaudience|adnxs\.com|mopub/i.test(e.host),
@@ -2218,6 +3159,13 @@ function passesCharlesFilter(entry) {
     if (!entry.host?.toLowerCase().includes(lo) &&
         !entry.path?.toLowerCase().includes(lo) &&
         !entry.url?.toLowerCase().includes(lo)) return false;
+  }
+  // Exclude filter: comma-separated keywords to hide
+  if (charlesExcludeText) {
+    const excludes = charlesExcludeText.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+    const hostLo = (entry.host || '').toLowerCase();
+    const urlLo  = (entry.url || '').toLowerCase();
+    if (excludes.some(ex => hostLo.includes(ex) || urlLo.includes(ex))) return false;
   }
   return true;
 }
@@ -2239,6 +3187,7 @@ const STATUS_LABELS = { ok:'2xx', redirect:'3xx', client_error:'4xx', server_err
 function makeCharlesRow(entry) {
   const div = document.createElement('div');
   div.className = `charles-row status-${entry.status_cat}`;
+  div._charlesEntry = entry;   // mutable — updated by deduplication logic
 
   const statusText = entry.status > 0 ? entry.status : '…';
   const duration   = entry.duration > 0 ? `${entry.duration}ms` : '…';
@@ -2265,12 +3214,8 @@ function makeCharlesRow(entry) {
     `<span class="ch-url" title="${escHtml(entry.url)}">${url}</span>` +
     `<span class="ch-duration">${duration}</span>`;
 
-  div.addEventListener('click', () => {
-    if (selectedCharlesRow) selectedCharlesRow.classList.remove('selected');
-    selectedCharlesRow = div;
-    div.classList.add('selected');
-    openCharlesDetail(entry);
-  });
+  div.addEventListener('click', () => highlightRow(div, div._charlesEntry, 'network'));
+  div.addEventListener('dblclick', () => openDetailModal(div._charlesEntry, 'network'));
 
   return div;
 }
@@ -2301,22 +3246,20 @@ function decodeBase64Deep(obj, depth) {
   if (typeof obj === 'string' && obj.length > 40 && /^[A-Za-z0-9+/\-_]+=*$/.test(obj)) {
     try {
       const bytes = Uint8Array.from(atob(obj.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-      // Try JSON first
+
+      // Try strict UTF-8 first — if it throws the bytes are not valid text (MessagePack, protobuf, etc.)
+      let text;
       try {
-        const text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
-        try { return decodeBase64Deep(JSON.parse(text), depth + 1); } catch {}
-      } catch {}
-      // Check if binary: count control chars (< 0x20, excluding tab/LF/CR)
-      const sample = bytes.slice(0, 200);
-      const ctrlCount = [...sample].filter(b => b < 0x20 && b !== 0x09 && b !== 0x0A && b !== 0x0D).length;
-      if (ctrlCount / sample.length > 0.12) {
-        // Binary (MessagePack, protobuf, etc.) — extract readable strings
+        text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+      } catch {
+        // Binary — extract readable ASCII strings (like `strings` command)
         const strs = extractBinaryStrings(bytes);
-        if (strs.length > 0) return `[binary ${bytes.length}B — strings: "${strs.join('", "')}"]`;
+        if (strs.length > 0) return `[MessagePack — ${strs.join(' · ')}]`;
         return `[binary: ${bytes.length} bytes]`;
       }
-      // Mostly text
-      const text = new TextDecoder('utf-8', {fatal: false}).decode(bytes);
+
+      // Valid UTF-8 — try JSON parse and recurse
+      try { return decodeBase64Deep(JSON.parse(text), depth + 1); } catch {}
       return `[base64→text: ${text}]`;
     } catch {}
   }
@@ -2475,98 +3418,7 @@ function renderAnalyticsEvents(events, entry) {
   return html;
 }
 
-let selectedNetworkEntry = null;
-
-function openCharlesDetail(entry) {
-  if (selectedRow) { selectedRow.classList.remove('selected'); selectedRow = null; }
-  selectedLog = null;
-  selectedNetworkEntry = entry;
-
-  const statusColor = {
-    ok: 'var(--ch-ok)', redirect: 'var(--ch-redirect)',
-    client_error: 'var(--ch-warn)', server_error: 'var(--ch-error)',
-  }[entry.status_cat] || 'var(--text)';
-
-  // Populate header meta fields
-  epLevel.textContent = `${entry.method}  ${entry.status || '…'}`;
-  epLevel.style.color = statusColor;
-  epTag.textContent   = entry.host;
-  epTag.style.color   = 'var(--cyan)';
-  epCat.textContent   = entry.ts;
-  epTs.textContent    = `${entry.duration > 0 ? entry.duration + 'ms' : '—'}  ${fmtSize(entry.size)}`;
-
-  // Replace message box with full URL
-  epMsg.textContent = entry.url;
-
-  // Build rich body content
-  const reqFmt  = tryFormatJSON(entry.req_body);
-  const respFmt = tryFormatJSON(entry.resp_body);
-
-  let html = '';
-
-  // ── Mixpanel / analytics: dedicated event view ──────────────────────────────
-  if (isMixpanelRequest(entry)) {
-    const events = parseMixpanelEvents(entry.req_body);
-    if (events && events.length) {
-      html += renderAnalyticsEvents(events, entry);
-      // Still show request headers collapsed
-      html += `<div class="ep-section" style="margin-top:8px">`;
-      html += `<div class="ep-section-label" style="font-size:10px">Request Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
-      html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.req_headers)}</div>`;
-      html += `</div>`;
-      epLoading.style.display = 'none';
-      epText.innerHTML = html;
-      epText.style.display = 'block';
-      epRerunBtn.style.display = 'none'; // Claude analyze not needed for analytics
-      explainPanel.classList.remove('hidden');
-      return;
-    }
-  }
-
-  // ── Default: generic request/response view ──────────────────────────────────
-  // Request section
-  html += `<div class="ep-section">`;
-  html += `<div class="ep-section-label">Request Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
-  html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.req_headers)}</div>`;
-  if (reqFmt) {
-    html += `<div class="ep-section-label" style="margin-top:8px">Request Body</div>`;
-    html += `<pre class="ep-code">${syntaxHighlightJSON(reqFmt.slice(0, 3000))}</pre>`;
-  }
-  html += `</div>`;
-
-  // Response section
-  html += `<div class="ep-section">`;
-  html += `<div class="ep-section-label">Response Headers <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
-  html += `<div class="ep-headers-list" style="display:none">${renderHeaders(entry.resp_headers)}</div>`;
-  if (respFmt) {
-    html += `<div class="ep-section-label" style="margin-top:8px">Response Body</div>`;
-    html += `<pre class="ep-code">${syntaxHighlightJSON(respFmt.slice(0, 3000))}</pre>`;
-  } else {
-    html += `<span style="color:var(--text-dim);font-size:11px">No response body captured</span>`;
-  }
-  html += `</div>`;
-
-  epLoading.style.display = 'none';
-  epText.innerHTML = html;
-  epText.style.display = 'block';
-
-  // Claude button — always available, auto-triggers on errors
-  epRerunBtn.style.display = 'inline-block';
-  epRerunBtn.textContent   = '⚡ Analyze with Claude';
-  epRerunBtn.onclick = () => analyzeNetworkRequest(entry);
-
-  explainPanel.classList.remove('hidden');
-
-  // Auto-analyze errors
-  if (entry.status_cat === 'server_error' || entry.status_cat === 'client_error') {
-    analyzeNetworkRequest(entry);
-  }
-}
-
-function analyzeNetworkRequest(entry) {
-  epLoading.style.display = 'flex';
-  socket.emit('explain_request', entry);
-}
+// (openCharlesDetail removed — replaced by openDetailModal)
 
 
 function addCharlesEntry(entry) {
@@ -2577,10 +3429,40 @@ function addCharlesEntry(entry) {
   const matchCount = charlesEntries.filter(passesCharlesFilter).length;
   charlesCountEl.textContent = `${matchCount} of ${charlesTotal}`;
 
+  if (charlesPaused) {
+    if (passesCharlesFilter(entry)) {
+      charlesPendingCount++;
+      updateCharlesPauseBtn();
+    }
+    return;
+  }
+
   if (!passesCharlesFilter(entry)) return;
 
   charlesEmpty.classList.add('hidden');
+
+  // Collapse consecutive /state/update rows — bump count badge on the newest row
+  const isStateUpdate = entry.path && entry.path.includes('/state/update');
+  if (isStateUpdate) {
+    const allRows = charlesTable.querySelectorAll('.charles-row');
+    const newestRow = globalSortDesc ? allRows[0] : allRows[allRows.length - 1];
+    if (newestRow && newestRow.dataset.stateUpdate) {
+      const count = parseInt(newestRow.dataset.stateUpdate) + 1;
+      newestRow.dataset.stateUpdate = count;
+      newestRow._charlesEntry = entry;   // click shows the latest decoded body
+      let badge = newestRow.querySelector('.ch-repeat-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'ch-repeat-badge';
+        newestRow.querySelector('.ch-url').appendChild(badge);
+      }
+      badge.textContent = ` ×${count}`;
+      return;
+    }
+  }
+
   const row = makeCharlesRow(entry);
+  if (isStateUpdate) row.dataset.stateUpdate = '1';
 
   if (globalSortDesc) {
     const first = charlesTable.querySelector('.charles-row');
@@ -2598,7 +3480,11 @@ function addCharlesEntry(entry) {
   }
 }
 
-socket.on('charles_entry', (entry) => addCharlesEntry(entry));
+// ── Analytics panel removed — charles entry/batch handlers ───────────────────
+
+socket.on('charles_entry', (entry) => {
+  addCharlesEntry(entry);
+});
 
 socket.on('charles_batch', (batch) => {
   if (!batch || !batch.length) return;
@@ -2606,11 +3492,19 @@ socket.on('charles_batch', (batch) => {
   recharles();
 });
 
-const proxyPortInput  = document.getElementById('proxy-port-input');
-const proxyStartBtn   = document.getElementById('proxy-start-btn');
-const proxyCertLink   = document.getElementById('proxy-cert-link');
-const proxyGuide      = document.getElementById('proxy-guide');
-const proxyGuideAddr  = document.getElementById('proxy-guide-addr');
+const proxyPortInput      = document.getElementById('proxy-port-input');
+const proxyStartBtn       = document.getElementById('proxy-start-btn');
+const proxyCertLink       = document.getElementById('proxy-cert-link');
+const proxyGuide          = document.getElementById('proxy-guide');
+const proxyGuideAddr      = document.getElementById('proxy-guide-addr');
+
+let _localIp = null;
+
+function updateProxyAddr() {
+  const ip = _localIp || '…';
+  const port = proxyPortInput.value || '8082';
+  proxyGuideAddr.textContent = `${ip}:${port}`;
+}
 
 function applyProxyStatus({ running, port, local_ip, cert_available }) {
   charlesDot.classList.toggle('watching', running);
@@ -2618,19 +3512,28 @@ function applyProxyStatus({ running, port, local_ip, cert_available }) {
   proxyStartBtn.classList.toggle('running', running);
   proxyPortInput.disabled = running;
 
+  if (local_ip) _localIp = local_ip;
+  updateProxyAddr();
+  proxyGuide.classList.toggle('running', running);
+
   if (running) {
-    const addr = `${local_ip || '…'}:${port}`;
-    proxyGuideAddr.textContent = addr;
-    proxyGuide.classList.add('visible');
     proxyCertLink.classList.add('visible');
     if (currentView === 'logcat') applyView('both');
     charlesEmpty.classList.add('hidden');
-  } else {
-    proxyGuide.classList.remove('visible');
   }
 
   if (cert_available) proxyCertLink.classList.add('visible');
 }
+
+// Update address preview when port input changes
+proxyPortInput.addEventListener('input', updateProxyAddr);
+
+// Fetch local IP on page load so address is visible before starting proxy
+fetch('/api/proxy/status').then(r => r.json()).then(data => {
+  _localIp = data.local_ip;
+  updateProxyAddr();
+  applyProxyStatus(data);
+}).catch(() => {});
 
 socket.on('proxy_status', applyProxyStatus);
 
@@ -2651,6 +3554,7 @@ proxyStartBtn.addEventListener('click', () => {
   }
 });
 
+
 // Click proxy address to copy
 proxyGuideAddr.addEventListener('click', () => {
   navigator.clipboard.writeText(proxyGuideAddr.textContent).then(() => {
@@ -2658,8 +3562,65 @@ proxyGuideAddr.addEventListener('click', () => {
   });
 });
 
+// ── Device proxy (UIAutomator) ───────────────────────────────────────────────
+const deviceProxySetBtn   = document.getElementById('device-proxy-set-btn');
+const deviceProxyClearBtn = document.getElementById('device-proxy-clear-btn');
+
+function deviceProxyAction(action) {
+  const label = action === 'set' ? 'Set' : 'Clear';
+  if (!confirm(`This will close Merge Cruise on the device.\n${label} Wi-Fi proxy via ADB? (~20s)`)) return;
+
+  const ip   = _localIp || '192.168.1.227';
+  const port = proxyPortInput.value || '8082';
+  const pin  = localStorage.getItem('device_pin') || '';
+
+  if (!pin) {
+    const entered = prompt('Enter device PIN (stored in browser for future use):');
+    if (!entered) return;
+    localStorage.setItem('device_pin', entered);
+  }
+
+  const storedPin = localStorage.getItem('device_pin') || '';
+  deviceProxySetBtn.disabled = true;
+  deviceProxyClearBtn.disabled = true;
+
+  const url = action === 'set' ? '/api/proxy/set-device' : '/api/proxy/clear-device';
+  const body = action === 'set'
+    ? { ip, port: parseInt(port), pin: storedPin }
+    : { pin: storedPin };
+
+  showToast(action === 'set' ? 'Setting device proxy... (~20s)' : 'Clearing device proxy... (~20s)');
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        showToast(action === 'set' ? 'Device proxy set — relaunch game' : 'Device proxy cleared');
+      } else {
+        showToast('Failed: ' + (data.output || 'unknown error').split('\n').pop());
+      }
+    })
+    .catch(err => showToast('Error: ' + err.message))
+    .finally(() => {
+      deviceProxySetBtn.disabled = false;
+      deviceProxyClearBtn.disabled = false;
+    });
+}
+
+deviceProxySetBtn.addEventListener('click', () => deviceProxyAction('set'));
+deviceProxyClearBtn.addEventListener('click', () => deviceProxyAction('clear'));
+
 document.getElementById('charles-clear-btn').addEventListener('click', () => {
   socket.emit('clear_charles');
+});
+
+// Logcat clear button (in panel header)
+document.getElementById('logcat-clear-btn').addEventListener('click', () => {
+  socket.emit('clear_logs');
 });
 
 // ── Sort headers (shared — clicking either syncs both panels) ────────────────
@@ -2693,12 +3654,43 @@ chClearSearch.addEventListener('click', () => {
   recharles();
 });
 
+// ── Charles exclude filter ────────────────────────────────────────────────────
+const chExclude = document.getElementById('ch-exclude');
+chExclude.value = charlesExcludeText;
+let chExcludeTimer;
+chExclude.addEventListener('input', () => {
+  charlesExcludeText = chExclude.value.trim();
+  localStorage.setItem('mc_charles_exclude', charlesExcludeText);
+  clearTimeout(chExcludeTimer);
+  chExcludeTimer = setTimeout(recharles, 160);
+});
+
 // Track running state for button toggle
 let proxy_state_running = false;
 socket.on('proxy_status', ({ running }) => { proxy_state_running = running; });
 
+// ── Pause / Resume buttons ────────────────────────────────────────────────────
+document.getElementById('logcat-pause-btn').addEventListener('click', () => {
+  logcatPaused = !logcatPaused;
+  if (!logcatPaused) {
+    logcatPendingCount = 0;
+    rerender();   // flush buffered entries by re-rendering from logs[]
+  }
+  updateLogcatPauseBtn();
+});
+
+document.getElementById('charles-pause-btn').addEventListener('click', () => {
+  charlesPaused = !charlesPaused;
+  if (!charlesPaused) {
+    charlesPendingCount = 0;
+    recharles();  // flush buffered entries by re-rendering from charlesEntries[]
+  }
+  updateCharlesPauseBtn();
+});
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 // Don't set empty state here — pollDeviceStatus() handles initial state async
+applyView('both');   // open with both panels visible by default
 </script>
 </body>
 </html>
