@@ -91,19 +91,6 @@ def cleanup_automation():
     subprocess.run(["adb", "shell", "pkill", "-f", "uiautomator"], capture_output=True, timeout=5)
     # Remove dump file
     subprocess.run(["adb", "shell", "rm", "-f", "/sdcard/ui_auto.xml"], capture_output=True, timeout=5)
-    # Reset accessibility to flush any lingering UIAutomator connection
-    subprocess.run(["adb", "shell", "settings", "put", "secure", "accessibility_enabled", "0"],
-                   capture_output=True, timeout=5)
-    # Kill the accessibility service cache
-    subprocess.run(["adb", "shell", "am", "broadcast",
-                    "-a", "com.android.server.accessibility.AccessibilityManagerService"],
-                   capture_output=True, timeout=5)
-    # Temporarily disable and re-enable the game to clear all pending intents
-    subprocess.run(["adb", "shell", "pm", "disable", "com.peerplay.megamerge"],
-                   capture_output=True, timeout=5)
-    time.sleep(0.5)
-    subprocess.run(["adb", "shell", "pm", "enable", "com.peerplay.megamerge"],
-                   capture_output=True, timeout=5)
 
 
 # ── Navigation helpers ───────────────────────────────────────────────────────

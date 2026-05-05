@@ -260,15 +260,14 @@ header::after {
 
 /* ── Filter bar ───────────────────────────────────────────────────── */
 .filter-bar {
-  min-height: var(--filter-h);
   flex-shrink: 0;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 8px 20px;
-  gap: 8px;
+  padding: 8px 14px;
+  gap: 6px;
 }
 
 /* Row 1: presets */
@@ -516,9 +515,6 @@ header::after {
   flex-shrink: 0;
   background: var(--surface);
   border-bottom: 1px solid var(--border2);
-  position: sticky;
-  top: 0;
-  z-index: 3;
 }
 .logcat-header-title {
   font-size: 11px;
@@ -537,8 +533,7 @@ header::after {
 .log-cols-header {
   display: grid;
   grid-template-columns: 168px 30px 185px 1fr;
-  position: sticky;
-  top: 36px;   /* offset by logcat-header height */
+  flex-shrink: 0;
   z-index: 5;
   background: var(--surface);
   border-bottom: 1px solid var(--border2);
@@ -568,8 +563,9 @@ header::after {
 /* ── Log viewer ───────────────────────────────────────────────────── */
 #log-container {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--bg);
   position: relative;
   min-width: 0;
@@ -581,6 +577,9 @@ header::after {
   width: 100%;
   font-family: var(--font-mono);
   font-size: 13px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Log row */
@@ -791,6 +790,11 @@ mark {
   background: var(--bg);
   border-left: 1px solid var(--border);
 }
+.charles-filter-area {
+  flex-shrink: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
 #charles-panel.hidden { display: none; }
 
 .charles-header {
@@ -880,7 +884,7 @@ mark {
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   flex-shrink: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   overflow-x: auto;
 }
 .ch-preset-btn {
@@ -1747,58 +1751,50 @@ mark {
     </div>
   </header>
 
-  <!-- ── Filter bar ── -->
-  <div class="filter-bar">
-    <!-- Row 1: presets -->
-    <div class="preset-row">
-      <button class="preset-btn active" data-preset="all">ALL</button>
-      <div class="preset-sep"></div>
-      <button class="preset-btn" data-preset="unity">⚙ UNITY</button>
-      <button class="preset-btn" data-preset="ads">📢 ADS</button>
-      <button class="preset-btn" data-preset="network">🌐 NETWORK</button>
-      <button class="preset-btn" data-preset="analytics">📊 ANALYTICS</button>
-      <button class="preset-btn" data-preset="sentry">🔴 SENTRY</button>
-      <button class="preset-btn" data-preset="facebook">👤 FACEBOOK</button>
-      <div class="preset-sep"></div>
-      <button class="preset-btn" data-preset="errors">⚠ ERRORS ONLY</button>
-    </div>
-
-    <!-- Row 1b: quick filter chips -->
-    <div class="chip-row" id="chip-row"></div>
-
-    <!-- Row 2: level toggles + search + controls -->
-    <div class="ctrl-row">
-      <div class="level-group">
-        <span class="level-lbl">Level</span>
-        <button class="lvl-btn active" data-level="V">V</button>
-        <button class="lvl-btn active" data-level="D">D</button>
-        <button class="lvl-btn active" data-level="I">I</button>
-        <button class="lvl-btn active" data-level="W">W</button>
-        <button class="lvl-btn active" data-level="E">E</button>
-      </div>
-
-      <div class="search-wrap">
-        <span class="search-icon">⌕</span>
-        <input type="text" id="search-input" placeholder="Filter tag or message…" autocomplete="off" spellcheck="false">
-        <button class="clear-search-btn" id="clear-search-btn">✕</button>
-      </div>
-
-      <div class="ctl-btns">
-        <button class="toggle-btn active" id="autoscroll-btn">↓ Auto</button>
-        <button class="action-btn" id="export-btn">Export</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ── Log viewer + explanation panel ── -->
   <div id="main-area">
     <div id="top-area">
     <div id="log-container">
-      <div class="logcat-header">
-        <span class="logcat-header-title">Logcat</span>
-        <span class="logcat-count" id="logcat-header-count"></span>
-        <button class="ch-pause-btn" id="logcat-pause-btn">⏸ Pause</button>
-        <button class="charles-clear-btn" id="logcat-clear-btn">Clear</button>
+      <!-- Logcat filter bar (inside left panel) -->
+      <div class="filter-bar">
+        <div class="logcat-header">
+          <span class="logcat-header-title">Logcat</span>
+          <span class="logcat-count" id="logcat-header-count"></span>
+          <button class="ch-pause-btn" id="logcat-pause-btn">⏸ Pause</button>
+          <button class="charles-clear-btn" id="logcat-clear-btn">Clear</button>
+        </div>
+        <div class="preset-row">
+          <button class="preset-btn active" data-preset="all">ALL</button>
+          <div class="preset-sep"></div>
+          <button class="preset-btn" data-preset="unity">⚙ UNITY</button>
+          <button class="preset-btn" data-preset="ads">📢 ADS</button>
+          <button class="preset-btn" data-preset="network">🌐 NETWORK</button>
+          <button class="preset-btn" data-preset="analytics">📊 ANALYTICS</button>
+          <button class="preset-btn" data-preset="sentry">🔴 SENTRY</button>
+          <button class="preset-btn" data-preset="facebook">👤 FACEBOOK</button>
+          <div class="preset-sep"></div>
+          <button class="preset-btn" data-preset="errors">⚠ ERRORS ONLY</button>
+        </div>
+        <div class="chip-row" id="chip-row"></div>
+        <div class="ctrl-row">
+          <div class="level-group">
+            <span class="level-lbl">Level</span>
+            <button class="lvl-btn active" data-level="V">V</button>
+            <button class="lvl-btn active" data-level="D">D</button>
+            <button class="lvl-btn active" data-level="I">I</button>
+            <button class="lvl-btn active" data-level="W">W</button>
+            <button class="lvl-btn active" data-level="E">E</button>
+          </div>
+          <div class="search-wrap">
+            <span class="search-icon">⌕</span>
+            <input type="text" id="search-input" placeholder="Filter tag or message…" autocomplete="off" spellcheck="false">
+            <button class="clear-search-btn" id="clear-search-btn">✕</button>
+          </div>
+          <div class="ctl-btns">
+            <button class="toggle-btn active" id="autoscroll-btn">↓ Auto</button>
+            <button class="action-btn" id="export-btn">Export</button>
+          </div>
+        </div>
       </div>
       <div class="log-cols-header">
         <span class="log-col-hdr sort-col active" id="log-time-hdr">Time <span class="sort-arrow">↓</span></span>
@@ -1825,29 +1821,31 @@ mark {
 
     <!-- Network Traffic panel -->
     <div id="charles-panel" class="hidden">
-      <div class="charles-header">
-        <span class="charles-status-dot" id="charles-dot"></span>
-        <span class="charles-header-title">Network Traffic</span>
-        <span class="charles-count" id="charles-count">0 requests</span>
-        <button class="ch-pause-btn" id="charles-pause-btn">⏸ Pause</button>
-        <button class="charles-clear-btn prominent" id="charles-clear-btn">Clear</button>
-      </div>
-      <div class="charles-filter-bar">
-        <button class="ch-preset-btn" data-filter="all">ALL</button>
-        <button class="ch-preset-btn active" data-filter="game">🎯 GAME API</button>
-        <button class="ch-preset-btn" data-filter="ads">📢 ADS SDKs</button>
-        <button class="ch-preset-btn" data-filter="analytics">📊 ANALYTICS</button>
-        <button class="ch-preset-btn" data-filter="errors">⚠ ERRORS 4xx/5xx</button>
-        <div class="ch-search-wrap">
-          <input type="text" id="ch-search" placeholder="host or path…" autocomplete="off">
-          <button id="ch-clear-search">✕</button>
+      <div class="charles-filter-area">
+        <div class="charles-header">
+          <span class="charles-status-dot" id="charles-dot"></span>
+          <span class="charles-header-title">Network Traffic</span>
+          <span class="charles-count" id="charles-count">0 requests</span>
+          <button class="ch-pause-btn" id="charles-pause-btn">⏸ Pause</button>
+          <button class="charles-clear-btn prominent" id="charles-clear-btn">Clear</button>
         </div>
-        <div class="ch-exclude-wrap">
-          <label>Exclude:</label>
-          <input type="text" id="ch-exclude" placeholder="domain1, domain2…" autocomplete="off">
+        <div class="charles-filter-bar">
+          <button class="ch-preset-btn" data-filter="all">ALL</button>
+          <button class="ch-preset-btn active" data-filter="game">🎯 GAME API</button>
+          <button class="ch-preset-btn" data-filter="ads">📢 ADS SDKs</button>
+          <button class="ch-preset-btn" data-filter="analytics">📊 ANALYTICS</button>
+          <button class="ch-preset-btn" data-filter="errors">⚠ ERRORS 4xx/5xx</button>
+          <div class="ch-search-wrap">
+            <input type="text" id="ch-search" placeholder="host or path…" autocomplete="off">
+            <button id="ch-clear-search">✕</button>
+          </div>
+          <div class="ch-exclude-wrap">
+            <label>Exclude:</label>
+            <input type="text" id="ch-exclude" placeholder="domain1, domain2…" autocomplete="off">
+          </div>
         </div>
-      </div>
-      <div class="charles-setup">
+        <div class="chip-row" id="charles-chip-row"></div>
+        <div class="charles-setup">
         <label>PORT</label>
         <input type="number" id="proxy-port-input" value="8082" min="1024" max="65535">
         <button class="charles-connect-btn" id="proxy-start-btn">Start Proxy</button>
@@ -1859,6 +1857,7 @@ mark {
           <span class="proxy-guide-addr" id="proxy-guide-addr" title="Click to copy">loading…</span>
         </div>
       </div>
+      </div><!-- /.charles-filter-area -->
       <div class="charles-cols">
         <span class="charles-col-hdr sort-col active" id="ch-time-hdr">Time <span class="sort-arrow">↓</span></span>
         <span class="charles-col-hdr">Method</span>
@@ -2122,7 +2121,7 @@ const ANALYTICS_LOG_PATTERNS = [
   /^\[Mixpanel\]\s+Sending batch of data:\s*(\[.+)/s,
   /^\[Mixpanel\]\s+Sending people data:\s*(\[.+)/s,
   /^\[Mixpanel\]\s+.+?:\s*(\[.+)/s,
-  /^\[AnalyticsSDK\]\s+Event tracked:\s*\S+,\s*(\{.+)/s,
+  /^\[AnalyticsSDK\]\s+Event tracked:\s*\S+\s*,\s*(\{.+)/s,
   /^\[TAPP\].+?:\s*(\[.+)/s,
   /^\[Analytics\].+?:\s*(\[.+)/s,
 ];
@@ -3328,6 +3327,104 @@ let selectedCharlesRow = null;
 let charlesFilterMode  = 'game';  // default: game traffic only
 let charlesSearchText  = '';
 let charlesExcludeText = localStorage.getItem('mc_charles_exclude') || '';
+let charlesQuickFilters = JSON.parse(localStorage.getItem('mc_charles_quick_filters') || '[]');
+
+function saveCharlesQuickFilters() {
+  localStorage.setItem('mc_charles_quick_filters', JSON.stringify(charlesQuickFilters));
+}
+
+function renderCharlesChips() {
+  const row = document.getElementById('charles-chip-row');
+  row.innerHTML = '';
+  const lbl = document.createElement('span');
+  lbl.className = 'chip-label';
+  lbl.textContent = 'NET';
+  lbl.style.color = 'var(--cyan)';
+  row.appendChild(lbl);
+  if (charlesQuickFilters.length === 0) {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'chip-add-btn';
+    addBtn.textContent = '+';
+    addBtn.title = 'Add network quick filter';
+    addBtn.onclick = showCharlesChipInput;
+    row.appendChild(addBtn);
+    return;
+  }
+  const anyActive = charlesQuickFilters.some(f => f.active);
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-chip' + (anyActive ? '' : ' active');
+  allBtn.textContent = 'ALL';
+  allBtn.style.fontFamily = 'var(--font-ui)';
+  allBtn.style.fontWeight = '700';
+  allBtn.style.letterSpacing = '0.05em';
+  allBtn.addEventListener('click', () => {
+    charlesQuickFilters.forEach(f => f.active = false);
+    saveCharlesQuickFilters();
+    renderCharlesChips();
+    recharles();
+  });
+  row.appendChild(allBtn);
+
+  charlesQuickFilters.forEach((f, i) => {
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip' + (f.active ? ' active' : '');
+    chip.innerHTML = `${escHtml(f.text)}<span class="chip-x" data-idx="${i}">✕</span>`;
+    chip.addEventListener('click', (e) => {
+      if (e.target.classList.contains('chip-x')) {
+        charlesQuickFilters.splice(parseInt(e.target.dataset.idx), 1);
+        saveCharlesQuickFilters();
+        renderCharlesChips();
+        recharles();
+        return;
+      }
+      charlesQuickFilters[i].active = !charlesQuickFilters[i].active;
+      saveCharlesQuickFilters();
+      renderCharlesChips();
+      recharles();
+    });
+    row.appendChild(chip);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'chip-add-btn';
+  addBtn.textContent = '+';
+  addBtn.title = 'Add quick filter';
+  addBtn.onclick = showCharlesChipInput;
+  row.appendChild(addBtn);
+}
+
+function showCharlesChipInput() {
+  const row = document.getElementById('charles-chip-row');
+  if (row.querySelector('.chip-add-input')) return;
+  const input = document.createElement('input');
+  input.className = 'chip-add-input';
+  input.placeholder = 'e.g. mixpanel';
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const val = input.value.trim();
+      if (val && !charlesQuickFilters.some(f => f.text === val)) {
+        charlesQuickFilters.push({ text: val, active: true });
+        saveCharlesQuickFilters();
+      }
+      renderCharlesChips();
+      recharles();
+    }
+    if (e.key === 'Escape') { renderCharlesChips(); }
+  });
+  input.addEventListener('blur', () => {
+    const val = input.value.trim();
+    if (val && !charlesQuickFilters.some(f => f.text === val)) {
+      charlesQuickFilters.push({ text: val, active: true });
+      saveCharlesQuickFilters();
+    }
+    renderCharlesChips();
+    recharles();
+  });
+  row.appendChild(input);
+  input.focus();
+}
+
+renderCharlesChips();
 
 // ── Shared sort state (synced between logcat + network panels) ────────────────
 let globalSortDesc = true;   // true = newest at top
@@ -3361,13 +3458,14 @@ const CH_PRESETS = {
   //   firebaseinstallations.googleapis.com     — Firebase Installations API
   //   fcm.googleapis.com                       — Firebase Cloud Messaging (push notifications)
   //   app-measurement.com                      — Firebase Analytics measurement
-  game: e => /mergecruiseserver\.com|mixpanel\.com|singular\.net|stash\.gg|sentry\.io|smartlook\.com|firebaseremoteconfig\.googleapis\.com|firebaseremoteconfigrealtime\.googleapis\.com|firebaseinstallations\.googleapis\.com|fcm\.googleapis\.com|app-measurement\.com/i.test(e.host),
+  //   events.peerplay.dev                      — AnalyticsSDK / PDP (gRPC ingest)
+  game: e => /mergecruiseserver\.com|mixpanel\.com|singular\.net|stash\.gg|sentry\.io|smartlook\.com|firebaseremoteconfig\.googleapis\.com|firebaseremoteconfigrealtime\.googleapis\.com|firebaseinstallations\.googleapis\.com|fcm\.googleapis\.com|app-measurement\.com|events\.peerplay\.dev/i.test(e.host),
 
   // ADS SDKs: ad mediation & monetization networks
   ads: e => /applovin\.com|applovinmax\.com|ironsrc\.com|is\.com|unityads\.unity3d|unity3d\.com\/ads|vungle|chartboost|adcolony|googleads\.g\.doubleclick|doubleclick\.net|googlesyndication|fbaudience|adnxs\.com|mopub/i.test(e.host),
 
   // ANALYTICS: event tracking, crash reporting, attribution
-  analytics: e => /firebaselogging\.googleapis|firebaseio\.com|firebase\.google|mixpanel\.com|segment\.io|amplitude\.com|sentry\.io|appsflyer\.com|adjust\.com|kochava|tenjin\.io|singular\.net|braze\.com/i.test(e.host),
+  analytics: e => /firebaselogging\.googleapis|firebaseio\.com|firebase\.google|mixpanel\.com|segment\.io|amplitude\.com|sentry\.io|appsflyer\.com|adjust\.com|kochava|tenjin\.io|singular\.net|braze\.com|events\.peerplay\.dev/i.test(e.host),
 
   // ERRORS: any request that returned a 4xx or 5xx
   errors: e => e.status >= 400,
@@ -3387,6 +3485,17 @@ function passesCharlesFilter(entry) {
     const hostLo = (entry.host || '').toLowerCase();
     const urlLo  = (entry.url || '').toLowerCase();
     if (excludes.some(ex => hostLo.includes(ex) || urlLo.includes(ex))) return false;
+  }
+  // Quick filter chips (OR logic — match any active chip)
+  const activeCharlesChips = charlesQuickFilters.filter(f => f.active);
+  if (activeCharlesChips.length > 0) {
+    const url  = (entry.url  || '').toLowerCase();
+    const host = (entry.host || '').toLowerCase();
+    const path = (entry.path || '').toLowerCase();
+    if (!activeCharlesChips.some(f => {
+      const lo = f.text.toLowerCase();
+      return url.includes(lo) || host.includes(lo) || path.includes(lo);
+    })) return false;
   }
   return true;
 }
