@@ -216,9 +216,11 @@ def flush_unity_group(group: list, store_and_emit_fn):
     store_and_emit_fn(merged)
 
 
-# Regex to detect a line that starts a NEW Unity log (has a [Tag] prefix or looks
-# like a fresh log).  Continuation lines from a split message won't match.
-_RE_NEW_UNITY_MSG = re.compile(r'^\[[\w]+\]|^------|^#\d|^System\.')
+# Detect lines that look like JSON continuation from a split logcat message.
+# Only these should be merged into the previous group.  A JSON fragment will
+# start with a JSON token: quote, brace, bracket, number, bool, null, comma,
+# colon, or whitespace followed by one of those.
+_RE_JSON_CONTINUATION = re.compile(r'^[\s]*["\{\}\[\],:\d]|^[\s]*(true|false|null)\b')
 
 
 # ── Logcat thread ───────────────────────────────────────────────────────────
@@ -259,9 +261,12 @@ def run_logcat(serial: str, pid: str, stop_evt: threading.Event):
             if tag in ('Unity', 'UNITY'):
                 tid = parsed['tid']
                 msg = parsed['message']
-                # Same tid AND message looks like a continuation (no [Tag] prefix)
-                # → merge into current group (logcat splits long messages)
-                if tid == group_tid and unity_group and not _RE_NEW_UNITY_MSG.match(msg):
+                # Merge only if: same tid, group has JSON content, and this
+                # line looks like a JSON fragment (not a new English log line)
+                first_msg = unity_group[0]['message'] if unity_group else ''
+                is_json_group = '{' in first_msg or '[' in first_msg
+                if (tid == group_tid and unity_group
+                        and is_json_group and _RE_JSON_CONTINUATION.match(msg)):
                     unity_group.append(parsed)
                 else:
                     # New log message — flush previous group

@@ -82,6 +82,30 @@ def enter_pin(pin):
     time.sleep(2)
 
 
+# ── Automation cleanup ───────────────────────────────────────────────────────
+
+def cleanup_automation():
+    """Kill all traces of UIAutomator and Settings to prevent ghost automation."""
+    adb("am force-stop com.android.settings")
+    # Kill UIAutomator processes
+    subprocess.run(["adb", "shell", "pkill", "-f", "uiautomator"], capture_output=True, timeout=5)
+    # Remove dump file
+    subprocess.run(["adb", "shell", "rm", "-f", "/sdcard/ui_auto.xml"], capture_output=True, timeout=5)
+    # Reset accessibility to flush any lingering UIAutomator connection
+    subprocess.run(["adb", "shell", "settings", "put", "secure", "accessibility_enabled", "0"],
+                   capture_output=True, timeout=5)
+    # Kill the accessibility service cache
+    subprocess.run(["adb", "shell", "am", "broadcast",
+                    "-a", "com.android.server.accessibility.AccessibilityManagerService"],
+                   capture_output=True, timeout=5)
+    # Temporarily disable and re-enable the game to clear all pending intents
+    subprocess.run(["adb", "shell", "pm", "disable", "com.peerplay.megamerge"],
+                   capture_output=True, timeout=5)
+    time.sleep(0.5)
+    subprocess.run(["adb", "shell", "pm", "enable", "com.peerplay.megamerge"],
+                   capture_output=True, timeout=5)
+
+
 # ── Navigation helpers ───────────────────────────────────────────────────────
 
 def open_wifi():
@@ -248,9 +272,11 @@ def set_proxy(ip, port, pin):
     else:
         print("WARNING: Save button not found")
 
+    print("Step 10: Cleanup and launch game")
+    cleanup_automation()
+    time.sleep(0.5)
     adb("input keyevent 3")
-    time.sleep(1)
-    print("Step 10: Launching game")
+    time.sleep(0.5)
     adb("am start -n com.peerplay.megamerge/com.unity3d.player.UnityPlayerActivity")
 
 
@@ -308,6 +334,8 @@ def clear_proxy(pin):
     else:
         print("DONE: Proxy cleared (auto-saved)")
 
+    cleanup_automation()
+    time.sleep(0.5)
     adb("input keyevent 3")
 
 
