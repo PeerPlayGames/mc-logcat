@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Merge Cruise Logcat — macOS app entry point.
+Inspector Gadget — macOS app entry point.
 Opens the browser automatically and runs the server.
 """
 import os
@@ -44,8 +44,8 @@ from server import app, socketio, device_monitor
 monitor_thread = threading.Thread(target=device_monitor, daemon=True)
 monitor_thread.start()
 
-print(f'\n  ⚓  Merge Cruise Logcat — PeerPlay DevTools')
-print(f'  🌊  http://localhost:{PORT}\n')
+print(f'\n  🔍  Inspector Gadget — Log & Traffic Inspector')
+print(f'  🌐  http://localhost:{PORT}\n')
 
 socketio.run(app, host='0.0.0.0', port=PORT, debug=False,
              use_reloader=False, allow_unsafe_werkzeug=True)

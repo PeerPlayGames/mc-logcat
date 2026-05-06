@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Merge Cruise Logcat Viewer — PeerPlay DevTools
+Inspector Gadget — Log & Traffic Inspector — PeerPlay DevTools
 """
 
 import json
@@ -984,8 +984,8 @@ if __name__ == '__main__':
     threading.Thread(target=device_monitor, daemon=True).start()
     threading.Thread(target=_proxy_emit_worker, daemon=True).start()
 
-    print('\n  ⚓  Merge Cruise Logcat Server — PeerPlay DevTools')
-    print('  🌊  http://localhost:5001\n')
+    print('\n  🔍  Inspector Gadget — Log & Traffic Inspector')
+    print('  🌐  http://localhost:5001\n')
 
     socketio.run(app, host='0.0.0.0', port=5001, debug=False,
                  use_reloader=False, allow_unsafe_werkzeug=True)

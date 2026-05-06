@@ -1,5 +1,5 @@
 #!/bin/bash
-# Merge Cruise Logcat — one-command launcher
+# Inspector Gadget — one-command launcher
 # Usage: ./mc-logcat.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -10,7 +10,7 @@ lsof -ti tcp:$PORT | xargs kill -9 2>/dev/null
 sleep 0.5
 
 echo ""
-echo "  ⚓  Merge Cruise Logcat — PeerPlay DevTools"
+echo "  🔍  Inspector Gadget — Log & Traffic Inspector"
 echo "  ──────────────────────────────────────────"
 echo "  Starting server on http://localhost:$PORT ..."
 echo ""
