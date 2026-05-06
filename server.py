@@ -566,6 +566,8 @@ def _run_proxy_thread(port: int):
             def response(self, flow: mhttp.HTTPFlow) -> None:
                 try:
                     url    = flow.request.pretty_url
+                    host   = flow.request.host
+                    print(f'[proxy] response: {flow.request.method} {host}{flow.request.path[:80]}')
                     parsed = urlparse(url)
                     t0     = getattr(flow.request,  'timestamp_start', 0) or 0
                     t1     = getattr(flow.response, 'timestamp_end',   0) or 0
@@ -593,8 +595,8 @@ def _run_proxy_thread(port: int):
                         'resp_body':   _get_resp_body(flow.response, parsed.path),
                     }
                     _proxy_emit_queue.put(entry)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(f'[proxy] ERROR capturing {flow.request.pretty_url}: {e}')
 
         async def _run():
             opts   = Options(listen_host='0.0.0.0', listen_port=port, ssl_insecure=True)
