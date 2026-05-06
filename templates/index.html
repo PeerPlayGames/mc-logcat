@@ -2121,7 +2121,10 @@ const ANALYTICS_LOG_PATTERNS = [
   /^\[Mixpanel\]\s+Sending batch of data:\s*(\[.+)/s,
   /^\[Mixpanel\]\s+Sending people data:\s*(\[.+)/s,
   /^\[Mixpanel\]\s+.+?:\s*(\[.+)/s,
+  /^\[Mixpanel\]\s+.+?:\s*(\{.+)/s,
   /^\[AnalyticsSDK\]\s+Event tracked:\s*\S+\s*,\s*(\{.+)/s,
+  /^\[AnalyticsSDK\]\s+.+?:\s*(\[.+)/s,
+  /^\[AnalyticsSDK\]\s+.+?:\s*(\{.+)/s,
   /^\[TAPP\].+?:\s*(\[.+)/s,
   /^\[Analytics\].+?:\s*(\[.+)/s,
 ];
@@ -2309,48 +2312,31 @@ function renderAnalyticsLogDetail(parsed) {
       html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(wrapper, null, 2))}</pre>`;
 
     } else if (item.event) {
-      // Mixpanel track event
-      const p = item.properties || {};
-      html += `<div class="ep-event-name">${escHtml(item.event)}</div>`;
-      html += `<div class="ep-event-meta">`;
-      html += `<span>👤 ${escHtml(uid)}</span><span>🕐 ${escHtml(ts)}</span>`;
-      if (p.chapter    != null) html += `<span>📍 Ch.${p.chapter}</span>`;
-      if (p['$app_version_string']) html += `<span>v${escHtml(p['$app_version_string'])}</span>`;
-      html += `</div>`;
-      const keyRows = ANALYTICS_KEY_PROPS.filter(k => p[k] != null && k !== '$app_version_string').map(k => [k, p[k]]);
-      if (keyRows.length) {
-        html += `<div class="ep-event-props">`;
-        for (const [k, v] of keyRows) {
-          const display = typeof v === 'boolean'
-            ? `<span style="color:${v ? 'var(--ch-ok)' : 'var(--lv-e)'}">${v}</span>`
-            : `<span class="ep-prop-val">${escHtml(String(v))}</span>`;
-          html += `<div class="ep-prop-row"><span class="ep-prop-key">${escHtml(k)}</span>${display}</div>`;
-        }
-        html += `</div>`;
-      }
-      // BQ button
-      const q = buildBQQuery(item, p);
-      html += `<button class="ep-bq-btn" onclick="copyBQQuery(${JSON.stringify(q)})">📋 Copy BQ Query</button>`;
+      // Mixpanel track event — beautified JSON
+      const logMessage = prefix.replace(/,\s*$/, '').trim();
+      const deepParsed = deepParseStringifiedJSON(item);
+      const wrapper = {
+        Library: 'Mixpanel',
+        LogMessage: logMessage.replace(/^\[Mixpanel\]\s*/, ''),
+        Data: deepParsed
+      };
+      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(wrapper, null, 2))}</pre>`;
 
     } else if (item['$set']) {
-      // People API update
-      html += `<div class="ep-event-name" style="color:var(--cyan)">People Profile Update ($set)</div>`;
-      html += `<div class="ep-event-meta"><span>👤 ${escHtml(uid)}</span><span>🕐 ${escHtml(ts)}</span></div>`;
-      html += `<div class="ep-event-props">`;
-      for (const [k, v] of Object.entries(item['$set'])) {
-        html += `<div class="ep-prop-row"><span class="ep-prop-key">${escHtml(k)}</span><span class="ep-prop-val">${escHtml(String(v))}</span></div>`;
-      }
-      html += `</div>`;
+      // People API update — beautified JSON
+      const logMessage = prefix.replace(/,\s*$/, '').trim();
+      const deepParsed = deepParseStringifiedJSON(item);
+      const wrapper = {
+        Library: 'Mixpanel',
+        LogMessage: logMessage.replace(/^\[Mixpanel\]\s*/, ''),
+        Type: 'People Profile Update ($set)',
+        Data: deepParsed
+      };
+      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(wrapper, null, 2))}</pre>`;
     } else {
-      // Unknown — show raw
-      html += `<div class="ep-event-name" style="color:var(--text-muted)">Unknown payload</div>`;
-      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(item, null, 2).slice(0, 2000))}</pre>`;
-    }
-
-    // Raw payload collapsible (skip for AnalyticsSDK — already shown as beautified JSON)
-    if (!item.EventName) {
-      html += `<div class="ep-section-label" style="margin-top:8px;font-size:10px">Raw payload <button class="ep-headers-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">show/hide</button></div>`;
-      html += `<div style="display:none"><pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(item, null, 2))}</pre></div>`;
+      // Unknown — beautified JSON
+      const deepParsed = deepParseStringifiedJSON(item);
+      html += `<pre class="ep-code">${syntaxHighlightJSON(JSON.stringify(deepParsed, null, 2))}</pre>`;
     }
 
     html += `</div>`;
