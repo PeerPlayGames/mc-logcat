@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="circleClip">
+      <circle cx="256" cy="220" r="210"/>
+    </clipPath>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- Dark background circle -->
+  <circle cx="256" cy="220" r="212" fill="#0A1628" stroke="#F4C430" stroke-width="2.5" stroke-opacity="0.4"/>
+  <!-- Character image -->
+  <g clip-path="url(#circleClip)">
+    <image href="inspector-gadget-cutout.png" x="76" y="30" width="360" height="422"/>
+  </g>
+  <!-- Title text -->
+  <text x="256" y="458" text-anchor="middle" font-family="'Arial Black', 'Helvetica Neue', sans-serif"
+        font-size="30" font-weight="900" letter-spacing="2.5" fill="#F4C430" filter="url(#softGlow)">
+    INSPECTOR GADGET
+  </text>
+  <text x="256" y="490" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="12" font-weight="400" letter-spacing="4" fill="#6A90AB">
+    LOG &amp; TRAFFIC INSPECTOR
+  </text>
+</svg>

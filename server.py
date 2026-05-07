@@ -785,6 +785,24 @@ def index():
     return resp
 
 
+@app.route('/favicon.png')
+def favicon():
+    from flask import send_file
+    return send_file(os.path.join(os.path.dirname(__file__), 'favicon.png'), mimetype='image/png')
+
+
+@app.route('/logo.png')
+def logo_png():
+    from flask import send_file
+    return send_file(os.path.join(os.path.dirname(__file__), 'logo.png'), mimetype='image/png')
+
+
+@app.route('/header-icon.png')
+def header_icon():
+    from flask import send_file
+    return send_file(os.path.join(os.path.dirname(__file__), 'header-icon.png'), mimetype='image/png')
+
+
 @app.route('/api/status')
 def api_status():
     """REST fallback so the browser can always get device state reliably."""
